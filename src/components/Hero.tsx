@@ -29,9 +29,11 @@ const Hero = () => {
             </p>
             
             <div className="flex flex-wrap gap-4">
-              <Button size="lg" variant="secondary" className="group">
-                Explore Projects
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              <Button size="lg" variant="secondary" className="group" asChild>
+                <a href="/browse">
+                  Explore Projects
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </a>
               </Button>
               <Button size="lg" variant="outline">
                 Start Your Journey

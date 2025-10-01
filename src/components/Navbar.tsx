@@ -15,13 +15,13 @@ const Navbar = () => {
             
             <div className="hidden md:flex items-center gap-6">
               <a href="/" className="text-sm font-medium hover:text-secondary transition-colors">
-                Discover
+                Home
               </a>
-              <a href="/projects" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Projects
+              <a href="/browse" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Browse
               </a>
-              <a href="/about" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                How it works
+              <a href="/dashboard" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Dashboard
               </a>
             </div>
           </div>

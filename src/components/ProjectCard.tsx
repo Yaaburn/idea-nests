@@ -100,8 +100,8 @@ const ProjectCard = ({
           )}
         </div>
         
-        <Button className="w-full" variant="outline">
-          View Project
+        <Button className="w-full" variant="outline" asChild>
+          <a href="/project/1">View Project</a>
         </Button>
       </div>
     </Card>
