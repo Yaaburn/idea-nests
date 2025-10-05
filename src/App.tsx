@@ -8,6 +8,10 @@ import ProjectDetail from "./pages/ProjectDetail";
 import Browse from "./pages/Browse";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
+import CreateProject from "./pages/CreateProject";
+import Profile from "./pages/Profile";
+import InvestorRoom from "./pages/InvestorRoom";
+import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +26,10 @@ const App = () => (
           <Route path="/project/:id" element={<ProjectDetail />} />
           <Route path="/browse" element={<Browse />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/create-project" element={<CreateProject />} />
+          <Route path="/profile/:id" element={<Profile />} />
+          <Route path="/investor-room/:id" element={<InvestorRoom />} />
+          <Route path="/settings" element={<Settings />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

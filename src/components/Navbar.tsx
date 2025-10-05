@@ -43,8 +43,8 @@ const Navbar = () => {
               <User className="h-5 w-5" />
             </Button>
             
-            <Button variant="secondary" size="sm" className="hidden md:flex">
-              Start a Project
+            <Button variant="secondary" size="sm" className="hidden md:flex" asChild>
+              <a href="/create-project">Start a Project</a>
             </Button>
           </div>
         </div>

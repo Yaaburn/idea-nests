@@ -35,8 +35,8 @@ const Hero = () => {
                   <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </a>
               </Button>
-              <Button size="lg" variant="outline">
-                Start Your Journey
+              <Button size="lg" variant="outline" asChild>
+                <a href="/create-project">Start Your Journey</a>
               </Button>
             </div>
             
