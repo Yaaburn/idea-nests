@@ -228,6 +228,35 @@ const Profile = () => {
 
                 <TabsContent value="about" className="space-y-6">
                   <Card className="p-6">
+                    <h3 className="font-semibold text-lg mb-4">Proof of Process</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Verified journey of development and collaboration
+                    </p>
+                    <Button variant="outline" className="w-full mb-6" asChild>
+                      <a href="/process-analyzer">View Full Process Analysis →</a>
+                    </Button>
+                    
+                    <div className="space-y-3 mb-6">
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm text-muted-foreground">Proof Score</span>
+                        <Badge variant="secondary">87/100</Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm text-muted-foreground">Connected Platforms</span>
+                        <Badge variant="secondary">4 active</Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm text-muted-foreground">Total Activities</span>
+                        <Badge variant="secondary">342</Badge>
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <span className="text-sm text-muted-foreground">Verified Milestones</span>
+                        <Badge variant="secondary">18</Badge>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="p-6">
                     <h3 className="font-semibold text-lg mb-4">Experience</h3>
                     <div className="space-y-6">
                       {user.experience.map((exp, index) => (
@@ -259,6 +288,27 @@ const Profile = () => {
                   {user.skills.map(skill => (
                     <Badge key={skill} variant="secondary">{skill}</Badge>
                   ))}
+                </div>
+              </Card>
+
+              <Card className="p-6">
+                <h3 className="font-semibold mb-4">Proof of Process</h3>
+                <Button variant="outline" className="w-full mb-4" asChild>
+                  <a href="/integrations">Connect Platforms →</a>
+                </Button>
+                <div className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Proof Score</span>
+                    <span className="font-medium">87/100</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Verified by</span>
+                    <span className="font-medium">2 mentors</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Active integrations</span>
+                    <span className="font-medium">4 platforms</span>
+                  </div>
                 </div>
               </Card>
 

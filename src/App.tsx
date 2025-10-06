@@ -12,6 +12,8 @@ import CreateProject from "./pages/CreateProject";
 import Profile from "./pages/Profile";
 import InvestorRoom from "./pages/InvestorRoom";
 import Settings from "./pages/Settings";
+import IntegrationHub from "./pages/IntegrationHub";
+import ProcessAnalyzer from "./pages/ProcessAnalyzer";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,8 @@ const App = () => (
           <Route path="/profile/:id" element={<Profile />} />
           <Route path="/investor-room/:id" element={<InvestorRoom />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/integrations" element={<IntegrationHub />} />
+          <Route path="/process-analyzer" element={<ProcessAnalyzer />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

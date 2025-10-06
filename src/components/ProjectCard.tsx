@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Clock, Users, TrendingUp, Heart } from "lucide-react";
+import ProofScore from "./ProofScore";
 
 interface ProjectCardProps {
   title: string;
@@ -15,6 +16,8 @@ interface ProjectCardProps {
   contributors: number;
   progress: number;
   daysLeft?: number;
+  proofScore?: number;
+  verifications?: number;
 }
 
 const ProjectCard = ({
@@ -28,6 +31,8 @@ const ProjectCard = ({
   contributors,
   progress,
   daysLeft,
+  proofScore = 75,
+  verifications = 0,
 }: ProjectCardProps) => {
   return (
     <Card className="group overflow-hidden border-border hover:shadow-[var(--shadow-medium)] transition-all duration-300 hover:-translate-y-1">
@@ -48,10 +53,13 @@ const ProjectCard = ({
           </Button>
         </div>
         
-        <div className="absolute bottom-3 left-3">
+        <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
           <Badge className="bg-card/90 backdrop-blur text-foreground border-0">
             {stage}
           </Badge>
+          <div className="bg-card/90 backdrop-blur rounded-full">
+            <ProofScore score={proofScore} verifications={verifications} size="sm" />
+          </div>
         </div>
       </div>
       

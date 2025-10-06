@@ -10,6 +10,8 @@ import Footer from "@/components/Footer";
 import ApplyModal from "@/components/ApplyModal";
 import VideoModal from "@/components/VideoModal";
 import ProjectTimeline from "@/components/ProjectTimeline";
+import ProofScore from "@/components/ProofScore";
+import VerificationBadge from "@/components/VerificationBadge";
 
 const ProjectDetail = () => {
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
@@ -86,7 +88,11 @@ const ProjectDetail = () => {
               <Card className="p-8 space-y-6">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <Badge className="mb-3">{project.stage}</Badge>
+                    <div className="flex items-center gap-3 mb-3">
+                      <Badge>{project.stage}</Badge>
+                      <ProofScore score={75} verifications={3} size="md" />
+                      <VerificationBadge type="mentor" verifier="Dr. James Liu" date="2025-09-23" />
+                    </div>
                     <h1 className="text-4xl font-bold mb-3">{project.title}</h1>
                     <p className="text-xl text-muted-foreground">{project.tagline}</p>
                   </div>
@@ -278,7 +284,18 @@ const ProjectDetail = () => {
 
               {/* Timeline */}
               <Card className="p-8">
-                <h3 className="text-2xl font-bold mb-6">Progress Timeline</h3>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-bold">Progress Timeline</h3>
+                  <Button variant="outline" size="sm" asChild>
+                    <a href="/integrations">Connect Platforms →</a>
+                  </Button>
+                </div>
+                <div className="mb-4 p-4 bg-secondary/5 border border-secondary/20 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    This timeline is automatically generated from connected platforms (GitHub, Notion, Figma). 
+                    Each milestone can be verified by team members or mentors.
+                  </p>
+                </div>
                 <ProjectTimeline />
               </Card>
             </div>
@@ -326,6 +343,30 @@ const ProjectDetail = () => {
                       <span className="text-muted-foreground">Investors watching</span>
                       <span className="font-medium">23</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Proof Score</span>
+                      <span className="font-medium">75/100</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t space-y-3">
+                  <h4 className="font-semibold mb-2">Verifications</h4>
+                  <div className="space-y-2">
+                    <VerificationBadge 
+                      type="mentor" 
+                      verifier="Dr. James Liu" 
+                      date="2025-09-23" 
+                    />
+                    <VerificationBadge 
+                      type="institution" 
+                      verifier="Stanford Innovation Lab" 
+                      date="2025-09-15" 
+                    />
+                    <VerificationBadge 
+                      type="auto" 
+                      date="2025-10-01" 
+                    />
                   </div>
                 </div>
 

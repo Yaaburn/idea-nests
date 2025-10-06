@@ -13,6 +13,8 @@ const FeaturedProjects = () => {
       contributors: 8,
       progress: 65,
       daysLeft: 45,
+      proofScore: 87,
+      verifications: 3,
     },
     {
       title: "CodeMentor AI",
@@ -23,6 +25,8 @@ const FeaturedProjects = () => {
       contributors: 12,
       progress: 80,
       daysLeft: 30,
+      proofScore: 92,
+      verifications: 5,
     },
     {
       title: "EcoTrack",
@@ -33,6 +37,8 @@ const FeaturedProjects = () => {
       contributors: 15,
       progress: 90,
       daysLeft: 20,
+      proofScore: 95,
+      verifications: 6,
     },
     {
       title: "HealthSync",
@@ -43,6 +49,8 @@ const FeaturedProjects = () => {
       contributors: 5,
       progress: 30,
       daysLeft: 60,
+      proofScore: 58,
+      verifications: 1,
     },
     {
       title: "LocalArtisan",
@@ -53,6 +61,8 @@ const FeaturedProjects = () => {
       contributors: 10,
       progress: 55,
       daysLeft: 40,
+      proofScore: 73,
+      verifications: 2,
     },
     {
       title: "QuantumLearn",
@@ -63,6 +73,8 @@ const FeaturedProjects = () => {
       contributors: 7,
       progress: 45,
       daysLeft: 50,
+      proofScore: 68,
+      verifications: 2,
     },
   ];
 
