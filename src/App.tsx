@@ -14,6 +14,9 @@ import InvestorRoom from "./pages/InvestorRoom";
 import Settings from "./pages/Settings";
 import IntegrationHub from "./pages/IntegrationHub";
 import ProcessAnalyzer from "./pages/ProcessAnalyzer";
+import Workspace from "./pages/Workspace";
+import People from "./pages/People";
+import Notifications from "./pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +37,10 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/integrations" element={<IntegrationHub />} />
           <Route path="/process-analyzer" element={<ProcessAnalyzer />} />
+          <Route path="/workspace" element={<Workspace />} />
+          <Route path="/workspace/:projectId" element={<Workspace />} />
+          <Route path="/people" element={<People />} />
+          <Route path="/notifications" element={<Notifications />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
