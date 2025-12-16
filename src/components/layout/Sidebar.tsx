@@ -18,7 +18,7 @@ const navItems = [
   { icon: Home, label: "Home", path: "/" },
   { icon: FolderKanban, label: "Projects", path: "/browse" },
   { icon: Briefcase, label: "Workspace", path: "/workspace" },
-  { icon: Activity, label: "Proof of Process", path: "/process-analyzer" },
+  { icon: Activity, label: "Project Analysis", path: "/project-analysis/demo" },
   { icon: Users, label: "People", path: "/people" },
 ];
 
