@@ -2,12 +2,11 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import ProjectCard from "@/components/ProjectCard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
 import { 
   MapPin, 
   Link as LinkIcon, 
@@ -15,21 +14,34 @@ import {
   Calendar,
   Award,
   Users,
-  Briefcase,
-  MessageCircle
+  MessageCircle,
+  UserPlus,
+  Briefcase
 } from "lucide-react";
+
+// Profile Components
+import PersonalAnalyticsDashboard from "@/components/profile/PersonalAnalyticsDashboard";
+import ActiveProjectCard from "@/components/profile/ActiveProjectCard";
+import ContributionsDrawer from "@/components/profile/ContributionsDrawer";
+import PersonalPoPTimeline from "@/components/profile/PersonalPoPTimeline";
+import SkillsBreakdown from "@/components/profile/SkillsBreakdown";
+import RegionalRankCard from "@/components/profile/RegionalRankCard";
+import ViewModeSelector from "@/components/profile/ViewModeSelector";
 
 const Profile = () => {
   const { id } = useParams();
   const [isFollowing, setIsFollowing] = useState(false);
+  const [viewMode, setViewMode] = useState<'public' | 'member' | 'leader'>('public');
+  const [contributionsOpen, setContributionsOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<string>('');
 
   // Mock user data
   const user = {
     name: "Sarah Chen",
     username: "@sarahchen",
     avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-    bio: "Climate tech founder | Ex-Stanford researcher | Building sustainable solutions for agriculture",
-    location: "San Francisco, CA",
+    headline: "Climate tech founder | Building sustainable solutions for agriculture",
+    location: "Biên Hòa",
     website: "sarahchen.com",
     email: "sarah@solarsense.io",
     joinedDate: "Jan 2024",
@@ -39,8 +51,12 @@ const Profile = () => {
       followers: 248,
       following: 156,
     },
-    skills: ["IoT", "Agriculture", "Hardware", "Climate Tech", "Product Design", "React"],
-    interests: ["Sustainability", "AI/ML", "Open Source"],
+    roles: ["Founder", "Designer", "Researcher"],
+    verifications: [
+      { type: "Identity", verified: true },
+      { type: "Education", name: "Stanford University", verified: true },
+      { type: "Project", name: "SolarSense", verified: true },
+    ],
     experience: [
       {
         title: "Founder & CEO",
@@ -55,209 +71,208 @@ const Profile = () => {
         description: "Agricultural sensor systems research"
       },
     ],
-    verifications: [
-      { type: "Institution", name: "Stanford University", verified: true },
-      { type: "Mentor", name: "Dr. James Liu", verified: true },
-    ],
   };
 
-  const projects = [
+  const activeProjects = [
     {
+      id: 'solarsense',
       title: "SolarSense - Farm Monitoring",
-      description: "Building low-cost solar sensors for farmers to monitor soil conditions.",
-      founderName: "Sarah Chen",
-      tags: ["IoT", "Agriculture", "Hardware"],
-      stage: "Prototype",
-      contributors: 8,
+      description: "Building low-cost solar sensors for farmers to monitor soil conditions and optimize irrigation.",
+      role: "Founder",
+      status: 'Building' as const,
+      tags: ["IoT", "Agriculture", "Hardware", "Climate Tech"],
       progress: 65,
-      daysLeft: 45,
+      daysActive: 120,
+    },
+    {
+      id: 'ecotrack',
+      title: "EcoTrack - Carbon Footprint",
+      description: "Platform for tracking and reducing personal carbon footprint with gamification.",
+      role: "Frontend Lead",
+      status: 'MVP' as const,
+      tags: ["React", "Climate Tech", "Mobile"],
+      progress: 85,
+      daysActive: 45,
     },
   ];
 
-  const contributions = [
-    {
-      title: "EcoTrack - Carbon Footprint",
-      role: "Frontend Developer",
-      period: "Mar 2024 - Present",
-      tags: ["React", "Climate Tech"],
-    },
-    {
-      title: "GreenGrid - Energy Management",
-      role: "IoT Consultant",
-      period: "Jan 2024 - Feb 2024",
-      tags: ["IoT", "Hardware"],
-    },
-  ];
+  const handleViewContributions = (projectId: string, projectTitle: string) => {
+    setSelectedProject(projectTitle);
+    setContributionsOpen(true);
+  };
 
   return (
     <>
       <Navbar />
       
       <div className="min-h-screen bg-background">
-        {/* Header */}
-        <div className="bg-gradient-to-br from-primary/5 via-secondary/5 to-background border-b">
-          <div className="container mx-auto px-4 lg:px-8 py-12">
-            <div className="flex flex-col md:flex-row gap-6 items-start">
-              <Avatar className="h-32 w-32 border-4 border-background shadow-lg">
-                <AvatarImage src={user.avatar} />
-                <AvatarFallback>{user.name[0]}</AvatarFallback>
-              </Avatar>
-
-              <div className="flex-1">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
-                  <h1 className="text-3xl font-bold">{user.name}</h1>
-                  <span className="text-muted-foreground">{user.username}</span>
-                </div>
-
-                <p className="text-lg mb-4 max-w-2xl">{user.bio}</p>
-
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground mb-4">
-                  {user.location && (
-                    <div className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      {user.location}
-                    </div>
-                  )}
-                  {user.website && (
-                    <div className="flex items-center gap-1">
-                      <LinkIcon className="h-4 w-4" />
-                      <a href={`https://${user.website}`} className="hover:text-secondary transition-colors">
-                        {user.website}
-                      </a>
-                    </div>
-                  )}
-                  {user.email && (
-                    <div className="flex items-center gap-1">
-                      <Mail className="h-4 w-4" />
-                      {user.email}
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    Joined {user.joinedDate}
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {user.verifications.map((verification, index) => (
-                    <Badge key={index} variant="secondary" className="gap-1">
-                      <Award className="h-3 w-3" />
-                      {verification.type} verified by {verification.name}
-                    </Badge>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap gap-3">
-                  <Button 
-                    variant={isFollowing ? "outline" : "secondary"}
-                    onClick={() => setIsFollowing(!isFollowing)}
-                  >
-                    <Users className="h-4 w-4 mr-2" />
-                    {isFollowing ? "Following" : "Follow"}
-                  </Button>
-                  <Button variant="outline">
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Message
-                  </Button>
-                </div>
-              </div>
-
-              {/* Stats */}
-              <Card className="p-4 min-w-[200px]">
-                <div className="grid grid-cols-2 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl font-bold">{user.stats.projects}</div>
-                    <div className="text-xs text-muted-foreground">Projects</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">{user.stats.contributions}</div>
-                    <div className="text-xs text-muted-foreground">Contributions</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">{user.stats.followers}</div>
-                    <div className="text-xs text-muted-foreground">Followers</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold">{user.stats.following}</div>
-                    <div className="text-xs text-muted-foreground">Following</div>
-                  </div>
-                </div>
-              </Card>
-            </div>
+        {/* View Mode Selector (for demo) */}
+        <div className="bg-muted/50 border-b py-2">
+          <div className="container mx-auto px-4 lg:px-8 flex justify-end">
+            <ViewModeSelector viewMode={viewMode} onChange={setViewMode} />
           </div>
         </div>
 
-        {/* Content */}
-        <div className="container mx-auto px-4 lg:px-8 py-12">
-          <div className="grid lg:grid-cols-3 gap-8">
-            {/* Main Content */}
-            <div className="lg:col-span-2">
-              <Tabs defaultValue="projects">
-                <TabsList className="mb-6">
-                  <TabsTrigger value="projects">Projects</TabsTrigger>
-                  <TabsTrigger value="contributions">Contributions</TabsTrigger>
-                  <TabsTrigger value="about">About</TabsTrigger>
-                </TabsList>
+        <div className="container mx-auto px-4 lg:px-8 py-8">
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* LEFT SIDEBAR (Sticky) */}
+            <aside className="lg:w-72 flex-shrink-0">
+              <div className="lg:sticky lg:top-24 space-y-6">
+                {/* Profile Card */}
+                <Card className="p-6">
+                  {/* Avatar */}
+                  <div className="flex justify-center mb-4">
+                    <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
+                      <AvatarImage src={user.avatar} />
+                      <AvatarFallback>{user.name[0]}</AvatarFallback>
+                    </Avatar>
+                  </div>
 
-                <TabsContent value="projects" className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    {projects.map((project, index) => (
-                      <ProjectCard key={index} {...project} />
+                  {/* Name & Headline */}
+                  <div className="text-center mb-4">
+                    <h1 className="text-xl font-bold mb-1">{user.name}</h1>
+                    <p className="text-sm text-muted-foreground mb-2">{user.username}</p>
+                    <p className="text-sm">{user.headline}</p>
+                  </div>
+
+                  {/* Location */}
+                  <div className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground mb-4">
+                    <MapPin className="h-4 w-4" />
+                    <span>{user.location}</span>
+                  </div>
+
+                  {/* Role Tags */}
+                  <div className="flex flex-wrap justify-center gap-1.5 mb-4">
+                    {user.roles.map(role => (
+                      <Badge key={role} variant="secondary" className="text-xs">{role}</Badge>
                     ))}
                   </div>
-                </TabsContent>
 
-                <TabsContent value="contributions" className="space-y-4">
-                  {contributions.map((contribution, index) => (
-                    <Card key={index} className="p-6 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h3 className="font-semibold text-lg mb-1">{contribution.title}</h3>
-                          <p className="text-sm text-muted-foreground">{contribution.role}</p>
-                        </div>
-                        <Badge variant="outline">{contribution.period}</Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {contribution.tags.map(tag => (
-                          <Badge key={tag} variant="secondary">{tag}</Badge>
-                        ))}
-                      </div>
-                    </Card>
-                  ))}
-                </TabsContent>
+                  {/* Verification Badges */}
+                  <div className="space-y-2 mb-4">
+                    {user.verifications.filter(v => v.verified).map((verification, index) => (
+                      <Badge key={index} variant="outline" className="w-full justify-start gap-1.5 py-1.5">
+                        <Award className="h-3.5 w-3.5 text-emerald-500" />
+                        <span className="text-xs">
+                          {verification.type} {verification.name && `• ${verification.name}`}
+                        </span>
+                      </Badge>
+                    ))}
+                  </div>
 
-                <TabsContent value="about" className="space-y-6">
-                  <Card className="p-6">
-                    <h3 className="font-semibold text-lg mb-4">Proof of Process</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Verified journey of development and collaboration
-                    </p>
-                    <Button variant="outline" className="w-full mb-6" asChild>
-                      <a href="/process-analyzer">View Full Process Analysis →</a>
+                  <Separator className="my-4" />
+
+                  {/* CTAs */}
+                  <div className="space-y-2">
+                    <Button 
+                      variant={isFollowing ? "outline" : "secondary"}
+                      className="w-full"
+                      onClick={() => setIsFollowing(!isFollowing)}
+                    >
+                      <Users className="h-4 w-4 mr-2" />
+                      {isFollowing ? "Following" : "Follow"}
                     </Button>
-                    
-                    <div className="space-y-3 mb-6">
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <span className="text-sm text-muted-foreground">Proof Score</span>
-                        <Badge variant="secondary">87/100</Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <span className="text-sm text-muted-foreground">Connected Platforms</span>
-                        <Badge variant="secondary">4 active</Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <span className="text-sm text-muted-foreground">Total Activities</span>
-                        <Badge variant="secondary">342</Badge>
-                      </div>
-                      <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <span className="text-sm text-muted-foreground">Verified Milestones</span>
-                        <Badge variant="secondary">18</Badge>
-                      </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button variant="outline" size="sm">
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        Invite
+                      </Button>
+                      <Button variant="outline" size="sm">
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        Message
+                      </Button>
                     </div>
-                  </Card>
+                  </div>
 
+                  <Separator className="my-4" />
+
+                  {/* Stats */}
+                  <div className="grid grid-cols-2 gap-3 text-center">
+                    <div>
+                      <div className="text-lg font-bold">{user.stats.projects}</div>
+                      <div className="text-xs text-muted-foreground">Projects</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold">{user.stats.contributions}</div>
+                      <div className="text-xs text-muted-foreground">Contributions</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold">{user.stats.followers}</div>
+                      <div className="text-xs text-muted-foreground">Followers</div>
+                    </div>
+                    <div>
+                      <div className="text-lg font-bold">{user.stats.following}</div>
+                      <div className="text-xs text-muted-foreground">Following</div>
+                    </div>
+                  </div>
+
+                  <Separator className="my-4" />
+
+                  {/* Links */}
+                  <div className="space-y-2 text-sm">
+                    {user.website && (
+                      <a 
+                        href={`https://${user.website}`} 
+                        className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <LinkIcon className="h-4 w-4" />
+                        {user.website}
+                      </a>
+                    )}
+                    {user.email && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Mail className="h-4 w-4" />
+                        {user.email}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Calendar className="h-4 w-4" />
+                      Joined {user.joinedDate}
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Regional Rank Card */}
+                <RegionalRankCard isOwner={true} />
+              </div>
+            </aside>
+
+            {/* MAIN CONTENT */}
+            <main className="flex-1 space-y-10">
+              {/* 1. Personal Analytics Dashboard (ALWAYS VISIBLE) */}
+              <section>
+                <PersonalAnalyticsDashboard viewMode={viewMode} />
+              </section>
+
+              {/* 2. Active Projects */}
+              <section>
+                <h2 className="text-xl font-semibold mb-4">Active Projects</h2>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {activeProjects.map((project) => (
+                    <ActiveProjectCard
+                      key={project.id}
+                      {...project}
+                      onViewContributions={() => handleViewContributions(project.id, project.title)}
+                    />
+                  ))}
+                </div>
+              </section>
+
+              {/* 3. Personal PoP Timeline */}
+              <section>
+                <PersonalPoPTimeline viewMode={viewMode} />
+              </section>
+
+              {/* 4. Skills & Capability Breakdown */}
+              <section>
+                <SkillsBreakdown />
+              </section>
+
+              {/* 5. Experience (condensed for non-leaders) */}
+              {(viewMode === 'member' || viewMode === 'leader') && (
+                <section>
+                  <h2 className="text-xl font-semibold mb-4">Experience</h2>
                   <Card className="p-6">
-                    <h3 className="font-semibold text-lg mb-4">Experience</h3>
                     <div className="space-y-6">
                       {user.experience.map((exp, index) => (
                         <div key={index} className="flex gap-4">
@@ -276,72 +291,19 @@ const Profile = () => {
                       ))}
                     </div>
                   </Card>
-                </TabsContent>
-              </Tabs>
-            </div>
-
-            {/* Sidebar */}
-            <div className="lg:col-span-1 space-y-6">
-              <Card className="p-6">
-                <h3 className="font-semibold mb-4">Skills</h3>
-                <div className="flex flex-wrap gap-2">
-                  {user.skills.map(skill => (
-                    <Badge key={skill} variant="secondary">{skill}</Badge>
-                  ))}
-                </div>
-              </Card>
-
-              <Card className="p-6">
-                <h3 className="font-semibold mb-4">Proof of Process</h3>
-                <Button variant="outline" className="w-full mb-4" asChild>
-                  <a href="/integrations">Connect Platforms →</a>
-                </Button>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Proof Score</span>
-                    <span className="font-medium">87/100</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Verified by</span>
-                    <span className="font-medium">2 mentors</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Active integrations</span>
-                    <span className="font-medium">4 platforms</span>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-6">
-                <h3 className="font-semibold mb-4">Interests</h3>
-                <div className="flex flex-wrap gap-2">
-                  {user.interests.map(interest => (
-                    <Badge key={interest} variant="outline">{interest}</Badge>
-                  ))}
-                </div>
-              </Card>
-
-              <Card className="p-6">
-                <h3 className="font-semibold mb-4">Activity</h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Projects created</span>
-                    <span className="font-medium">{user.stats.projects}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Collaborations</span>
-                    <span className="font-medium">{user.stats.contributions}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Verified milestones</span>
-                    <span className="font-medium">18</span>
-                  </div>
-                </div>
-              </Card>
-            </div>
+                </section>
+              )}
+            </main>
           </div>
         </div>
       </div>
+
+      {/* Contributions Drawer */}
+      <ContributionsDrawer 
+        open={contributionsOpen} 
+        onClose={() => setContributionsOpen(false)}
+        projectTitle={selectedProject}
+      />
 
       <Footer />
     </>
