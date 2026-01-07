@@ -129,6 +129,10 @@ const totalWeeks = 10;
 export const GoalsOutcomesTab = () => {
   const [expandedOkr, setExpandedOkr] = useState<string | null>("O1");
 
+  // TODO: Future implementation - auto-update progress based on milestone/task completion
+  // Milestone completion depends on "criteria that must be done" and those criteria include tasks.
+  // Progress % should be computed from completed tasks.
+
   return (
     <div className="space-y-6">
       {/* Goals KPIs */}
@@ -274,9 +278,6 @@ export const GoalsOutcomesTab = () => {
       <div className="bg-card rounded-xl border border-border p-6">
         <div className="mb-4">
           <h3 className="text-lg font-semibold text-foreground">Outcome vs Output</h3>
-          <p className="text-sm text-muted-foreground">
-            Not just "busy", but "making progress towards goals"
-          </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -317,14 +318,6 @@ export const GoalsOutcomesTab = () => {
               ))}
             </div>
           </div>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-border">
-          <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">Insight:</span> High output (127 tasks) 
-            translating to meaningful outcomes (3 demos, 5 user tests). Focus on increasing 
-            beta signups to hit launch target.
-          </p>
         </div>
       </div>
     </div>

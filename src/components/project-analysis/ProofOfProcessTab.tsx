@@ -41,8 +41,11 @@ import {
   Clock,
   Layers,
   Flame,
+  Lock,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { ViewMode } from "@/pages/ProjectAnalysis";
 
 // Generate mock heatmap data
 const generateHeatmapData = () => {
@@ -87,6 +90,7 @@ const mockEvents: ProofEvent[] = [
     whyItMatters: "Enables secure user onboarding and data protection",
     tags: ["feature", "security"],
     impact: "high",
+    isLeaderPermissioned: true,
   },
   {
     id: "2",
@@ -102,6 +106,7 @@ const mockEvents: ProofEvent[] = [
     whyItMatters: "First external validation with real users",
     tags: ["growth", "validation"],
     impact: "high",
+    isLeaderPermissioned: true,
   },
   {
     id: "3",
@@ -116,6 +121,7 @@ const mockEvents: ProofEvent[] = [
     whyItMatters: "Enables revenue generation",
     tags: ["feature", "ops"],
     impact: "high",
+    isLeaderPermissioned: false,
   },
   {
     id: "4",
@@ -130,6 +136,7 @@ const mockEvents: ProofEvent[] = [
     whyItMatters: "Improves user experience and reduces churn",
     tags: ["feature", "research"],
     impact: "medium",
+    isLeaderPermissioned: false,
   },
   {
     id: "5",
@@ -147,6 +154,7 @@ const mockEvents: ProofEvent[] = [
     whyItMatters: "Ensures data consistency and ACID compliance for financial transactions",
     tags: ["ops", "research"],
     impact: "high",
+    isLeaderPermissioned: true,
   },
   {
     id: "6",
@@ -162,6 +170,7 @@ const mockEvents: ProofEvent[] = [
     whyItMatters: "Validated core workflow, identified 3 UX improvements",
     tags: ["research", "growth"],
     impact: "medium",
+    isLeaderPermissioned: false,
   },
   {
     id: "7",
@@ -176,6 +185,7 @@ const mockEvents: ProofEvent[] = [
     whyItMatters: "Timeline adjusted, mitigation plan in place",
     tags: ["ops"],
     impact: "medium",
+    isLeaderPermissioned: false,
   },
 ];
 
@@ -211,6 +221,7 @@ const milestoneEvidencePacks = [
     metricsAfter: { signupRate: "Ready", securityScore: "A+" },
     demoProof: "Demo Recording v0.3",
     learnings: "OAuth integration took longer than expected. Document provider-specific quirks.",
+    isLeaderPermissioned: true,
   },
   {
     id: "m2",
@@ -223,6 +234,7 @@ const milestoneEvidencePacks = [
     metricsAfter: { revenue: "Ready", transactions: "Ready" },
     demoProof: "Payment Flow Demo",
     learnings: "Webhook handling requires careful idempotency checks.",
+    isLeaderPermissioned: false,
   },
 ];
 
@@ -239,7 +251,11 @@ const eventTypeFilters: { type: EventType; icon: typeof Target; label: string }[
   { type: "funding", icon: DollarSign, label: "Funding" },
 ];
 
-export const ProofOfProcessTab = () => {
+interface ProofOfProcessTabProps {
+  viewMode?: ViewMode;
+}
+
+export const ProofOfProcessTab = ({ viewMode = "leader" }: ProofOfProcessTabProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTypes, setSelectedTypes] = useState<EventType[]>([]);
   const [expandedMilestone, setExpandedMilestone] = useState<string | null>(null);
@@ -255,6 +271,11 @@ export const ProofOfProcessTab = () => {
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
     );
   };
+
+  // Determine which sections to show based on viewMode
+  const showEvidenceDistribution = viewMode !== "member";
+  const showProofTimeline = viewMode !== "member";
+  const isInvestorView = viewMode === "investor";
 
   return (
     <div className="space-y-6">
@@ -316,115 +337,18 @@ export const ProofOfProcessTab = () => {
         endDate={new Date()}
       />
 
-      {/* Evidence Type Distribution */}
-      <div className="bg-card rounded-xl border border-border p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">Evidence Distribution</h3>
-        <div className="h-[200px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={evidenceDistribution} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
-              <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))" }} />
-              <YAxis 
-                dataKey="type" 
-                type="category" 
-                width={80}
-                tick={{ fill: "hsl(var(--muted-foreground))" }}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                }}
-              />
-              <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                {evidenceDistribution.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Proof Timeline */}
-      <div className="grid lg:grid-cols-4 gap-6">
-        {/* Filters Sidebar */}
-        <div className="lg:col-span-1 space-y-4">
-          <div className="bg-card rounded-xl border border-border p-4">
-            <h4 className="font-medium text-foreground mb-3">Filter Events</h4>
-            
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search events..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-
-            <div className="space-y-2">
-              {eventTypeFilters.map(({ type, icon: Icon, label }) => (
-                <button
-                  key={type}
-                  onClick={() => toggleType(type)}
-                  className={cn(
-                    "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
-                    selectedTypes.includes(type)
-                      ? "bg-primary/20 text-primary"
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                  {label}
-                </button>
-              ))}
-            </div>
-
-            {selectedTypes.length > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSelectedTypes([])}
-                className="w-full mt-3"
-              >
-                Clear filters
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Timeline */}
-        <div className="lg:col-span-3 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-foreground">Proof Timeline</h3>
-            <Badge variant="outline">{filteredEvents.length} events</Badge>
-          </div>
-
-          <div className="relative">
-            {/* Timeline line */}
-            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
-            
-            <div className="space-y-4">
-              {filteredEvents.map((event) => (
-                <div key={event.id} className="relative pl-10">
-                  {/* Timeline dot */}
-                  <div className="absolute left-2.5 top-4 w-3 h-3 rounded-full bg-primary border-2 border-background" />
-                  <EventCard event={event} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Milestone Evidence Packs */}
+      {/* Milestone Evidence Packs - MOVED UP (before Evidence Distribution) */}
       <div className="bg-card rounded-xl border border-border p-6">
         <h3 className="text-lg font-semibold text-foreground mb-4">Milestone Evidence Packs</h3>
         <div className="space-y-3">
           {milestoneEvidencePacks.map((milestone) => (
-            <div key={milestone.id} className="border border-border rounded-lg overflow-hidden">
+            <div 
+              key={milestone.id} 
+              className={cn(
+                "border border-border rounded-lg overflow-hidden",
+                isInvestorView && milestone.isLeaderPermissioned && "ring-2 ring-green-500/50"
+              )}
+            >
               <button
                 onClick={() => setExpandedMilestone(
                   expandedMilestone === milestone.id ? null : milestone.id
@@ -437,6 +361,12 @@ export const ProofOfProcessTab = () => {
                   <Badge variant="outline" className="text-green-500 border-green-500/20">
                     {milestone.status}
                   </Badge>
+                  {isInvestorView && milestone.isLeaderPermissioned && (
+                    <Badge variant="outline" className="text-green-500 border-green-500/30 bg-green-500/10">
+                      <ShieldCheck className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
+                  )}
                 </div>
                 {expandedMilestone === milestone.id ? (
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -466,19 +396,39 @@ export const ProofOfProcessTab = () => {
                       <p className="text-xs text-muted-foreground mb-1">Artifacts</p>
                       <div className="flex flex-wrap gap-1">
                         {milestone.artifacts.map((artifact) => (
-                          <Button key={artifact} variant="outline" size="sm" className="h-7 text-xs gap-1">
-                            <ExternalLink className="h-3 w-3" />
-                            {artifact}
-                          </Button>
+                          isInvestorView ? (
+                            <Button 
+                              key={artifact} 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-7 text-xs gap-1 cursor-not-allowed opacity-70"
+                              disabled
+                            >
+                              <Lock className="h-3 w-3" />
+                              {artifact}
+                            </Button>
+                          ) : (
+                            <Button key={artifact} variant="outline" size="sm" className="h-7 text-xs gap-1">
+                              <ExternalLink className="h-3 w-3" />
+                              {artifact}
+                            </Button>
+                          )
                         ))}
                       </div>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Demo Proof</p>
-                      <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
-                        <Video className="h-3 w-3" />
-                        {milestone.demoProof}
-                      </Button>
+                      {isInvestorView ? (
+                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1 cursor-not-allowed opacity-70" disabled>
+                          <Lock className="h-3 w-3" />
+                          {milestone.demoProof}
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm" className="h-7 text-xs gap-1">
+                          <Video className="h-3 w-3" />
+                          {milestone.demoProof}
+                        </Button>
+                      )}
                     </div>
                     <div className="md:col-span-2">
                       <p className="text-xs text-muted-foreground mb-1">Learnings</p>
@@ -491,6 +441,113 @@ export const ProofOfProcessTab = () => {
           ))}
         </div>
       </div>
+
+      {/* Evidence Type Distribution - Hidden for Member view */}
+      {showEvidenceDistribution && (
+        <div className="bg-card rounded-xl border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Evidence Distribution</h3>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={evidenceDistribution} layout="vertical">
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                <XAxis type="number" tick={{ fill: "hsl(var(--muted-foreground))" }} />
+                <YAxis 
+                  dataKey="type" 
+                  type="category" 
+                  width={80}
+                  tick={{ fill: "hsl(var(--muted-foreground))" }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                  }}
+                />
+                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                  {evidenceDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Proof Timeline - Hidden for Member view, MOVED TO LAST */}
+      {showProofTimeline && (
+        <div className="grid lg:grid-cols-4 gap-6">
+          {/* Filters Sidebar */}
+          <div className="lg:col-span-1 space-y-4">
+            <div className="bg-card rounded-xl border border-border p-4">
+              <h4 className="font-medium text-foreground mb-3">Filter Events</h4>
+              
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search events..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              <div className="space-y-2">
+                {eventTypeFilters.map(({ type, icon: Icon, label }) => (
+                  <button
+                    key={type}
+                    onClick={() => toggleType(type)}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
+                      selectedTypes.includes(type)
+                        ? "bg-primary/20 text-primary"
+                        : "text-muted-foreground hover:bg-muted"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {selectedTypes.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedTypes([])}
+                  className="w-full mt-3"
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Timeline */}
+          <div className="lg:col-span-3 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground">Proof Timeline</h3>
+              <Badge variant="outline">{filteredEvents.length} events</Badge>
+            </div>
+
+            <div className="relative">
+              {/* Timeline line */}
+              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
+              
+              <div className="space-y-4">
+                {filteredEvents.map((event) => (
+                  <div key={event.id} className="relative pl-10">
+                    {/* Timeline dot */}
+                    <div className="absolute left-2.5 top-4 w-3 h-3 rounded-full bg-primary border-2 border-background" />
+                    <EventCard event={event} viewMode={viewMode} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
