@@ -1,0 +1,442 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// CONNECTIONS - Links projects to external data sources
+// ============================================================================
+model Connection {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  projectId       String   @map("project_id")
+  createdBy       String   @map("created_by") // userId who created
+  ownerUserId     String   @map("owner_user_id") // owner of the connection
+  
+  // Provider info
+  provider        Provider
+  resourceId      String   @map("resource_id") // sheetId, folderId, calendarId
+  resourceName    String?  @map("resource_name") // Human readable name
+  authType        AuthType @map("auth_type")
+  
+  // Status tracking
+  status          ConnectionStatus @default(PENDING)
+  lastSyncedAt    DateTime?        @map("last_synced_at")
+  itemsSynced     Int              @default(0) @map("items_synced")
+  errorMessage    String?          @map("error_message")
+  
+  // Delta sync cursors (provider-specific)
+  // Stored as JSONB for flexibility:
+  // drive: { startPageToken: "...", lastChangeToken: "..." }
+  // calendar: { syncToken: "..." }
+  // sheets: { driveChangeToken: "...", checksumVersion: "..." }
+  cursorJson      Json?    @map("cursor_json") @db.JsonB
+  
+  // Sheet Intelligence - Detected tab roles and profiles
+  // { tabId: { role: "PRIMARY_TASKS", confidence: 0.9, ... } }
+  tabProfiles     Json?    @map("tab_profiles") @db.JsonB
+
+  // OAuth tokens (encrypted, only for Calendar)
+  encryptedTokens String?  @map("encrypted_tokens")
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  rawRecords      RawRecord[]
+  canonicalTasks  CanonicalTask[]
+  canonicalArtifacts CanonicalArtifact[]
+  canonicalEvents CanonicalEvent[]
+  canonicalMilestones CanonicalMilestone[]
+  canonicalLinks  CanonicalLink[]
+  syncJobs        SyncJob[]
+  
+  @@unique([tenantId, projectId, provider, resourceId])
+  @@index([tenantId, projectId])
+  @@index([tenantId, projectId, provider])
+  @@map("connections")
+}
+
+enum Provider {
+  GOOGLE_SHEETS
+  GOOGLE_DRIVE
+  GOOGLE_CALENDAR
+}
+
+enum AuthType {
+  SHARE_TO_BOT      // Service account has access via sharing
+  OAUTH             // User OAuth consent
+}
+
+enum ConnectionStatus {
+  PENDING           // Created but not yet synced
+  ACTIVE            // Successfully syncing
+  SYNCING           // Currently syncing
+  ERROR             // Last sync failed
+  DISCONNECTED      // User revoked access
+}
+
+// ============================================================================
+// RAW RECORDS - Immutable audit trail of ingested data
+// ============================================================================
+model RawRecord {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  projectId       String   @map("project_id")
+  connectionId    String   @map("connection_id")
+  
+  // External reference
+  externalId      String   @map("external_id") // row index, fileId, eventId
+  
+  // Payload
+  data            Json     @db.JsonB
+  checksum        String   // SHA256 for change detection
+  
+  // Lineage (structured string for tracing)
+  // Format: "{provider}:{resourceId}:{subResource}:{identifier}:{timestamp}"
+  // Example: "sheets:1ABC123:Sheet1:row:5:2026-01-09T00:00:00Z"
+  lineageString   String   @map("lineage_string")
+  
+  fetchedAt       DateTime @default(now()) @map("fetched_at")
+  retentionUntil  DateTime @map("retention_until") // Auto-cleanup date
+  
+  // Relation
+  connection      Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  
+  @@unique([connectionId, externalId])
+  @@index([tenantId, projectId])
+  @@index([connectionId])
+  @@index([retentionUntil])
+  @@map("raw_records")
+}
+
+// ============================================================================
+// CANONICAL TASKS - Normalized task data from Sheets
+// ============================================================================
+model CanonicalTask {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  projectId       String   @map("project_id")
+  connectionId    String   @map("connection_id")
+  
+  // Normalized fields
+  title           String
+  description     String?
+  status          TaskStatus @default(UNKNOWN)
+  assigneeRaw     String?    @map("assignee_raw")
+  dueDate         DateTime?  @map("due_date")
+  startDate       DateTime?  @map("start_date")
+  completedAt     DateTime?  @map("completed_at")
+  priority        String?
+  tags            String[]   @default([])
+  phase           String?
+  
+  // Relations
+  milestoneId     String?    @map("milestone_id")
+  
+  // Lineage - trace back to source
+  sourceSheetId   String     @map("source_sheet_id")
+  sourceTabName   String     @map("source_tab_name")
+  sourceRowIndex  Int        @map("source_row_index")
+  rawRecordId     String?    @map("raw_record_id")
+  
+  // Mapping confidence
+  mappingConfidence Float?   @map("mapping_confidence")
+  parseErrors     Json?      @default("[]") @map("parse_errors") @db.JsonB
+  
+  syncedAt        DateTime   @default(now()) @map("synced_at")
+  
+  // Relations
+  connection      Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  milestone       CanonicalMilestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  
+  @@unique([connectionId, sourceSheetId, sourceTabName, sourceRowIndex])
+  @@index([tenantId, projectId])
+  @@index([tenantId, projectId, status])
+  @@index([connectionId])
+  @@map("canonical_tasks")
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  DONE
+  BLOCKED
+  UNKNOWN
+}
+
+// ============================================================================
+// CANONICAL ARTIFACTS - Normalized file metadata from Drive
+// ============================================================================
+model CanonicalArtifact {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  projectId       String   @map("project_id")
+  connectionId    String   @map("connection_id")
+  
+  // Drive file info
+  driveFileId     String   @map("drive_file_id")
+  name            String
+  mimeType        String   @map("mime_type")
+  typeCategory    ArtifactCategory @map("type_category")
+  webViewLink     String?  @map("web_view_link")
+  thumbnailLink   String?  @map("thumbnail_link")
+  
+  sizeBytes       BigInt   @map("size_bytes")
+  createdTime     DateTime @map("created_time")
+  modifiedTime    DateTime @map("modified_time")
+  modifiedBy      String?  @map("modified_by")
+  
+  trashed         Boolean  @default(false)
+  
+  // Lineage
+  rawRecordId     String?  @map("raw_record_id")
+  
+  syncedAt        DateTime @default(now()) @map("synced_at")
+  
+  // Relation
+  connection      Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  
+  @@unique([connectionId, driveFileId])
+  @@index([tenantId, projectId])
+  @@index([tenantId, projectId, typeCategory])
+  @@index([connectionId])
+  @@map("canonical_artifacts")
+}
+
+enum ArtifactCategory {
+  DOCUMENT
+  SPREADSHEET
+  PRESENTATION
+  IMAGE
+  VIDEO
+  PDF
+  OTHER
+}
+
+// ============================================================================
+// CANONICAL EVENTS - Normalized calendar events
+// ============================================================================
+model CanonicalEvent {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  projectId       String   @map("project_id")
+  connectionId    String   @map("connection_id")
+  
+  // Calendar event info
+  eventId         String   @map("event_id")
+  summary         String
+  description     String?
+  
+  startTime       DateTime @map("start_time")
+  endTime         DateTime @map("end_time")
+  isAllDay        Boolean  @default(false) @map("is_all_day")
+  
+  attendeesCount  Int      @default(0) @map("attendees_count")
+  attendeesRaw    Json?    @map("attendees_raw") @db.JsonB
+  
+  // Meet integration
+  hasMeetLink     Boolean  @default(false) @map("has_meet_link")
+  meetLink        String?  @map("meet_link")
+  conferenceId    String?  @map("conference_id")
+  
+  status          EventStatus @default(CONFIRMED)
+  recurrence      String?
+  
+  // Lineage
+  rawRecordId     String?  @map("raw_record_id")
+  
+  syncedAt        DateTime @default(now()) @map("synced_at")
+  
+  // Relation
+  connection      Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  
+  @@unique([connectionId, eventId])
+  @@index([tenantId, projectId])
+  @@index([tenantId, projectId, startTime])
+  @@index([connectionId])
+  @@map("canonical_events")
+}
+
+enum EventStatus {
+  CONFIRMED
+  TENTATIVE
+  CANCELLED
+}
+
+// ============================================================================
+// CANONICAL MILESTONES - Normalized milestones
+// ============================================================================
+model CanonicalMilestone {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  projectId       String   @map("project_id")
+  connectionId    String   @map("connection_id")
+  
+  title           String
+  status          String?
+  startDate       DateTime? @map("start_date")
+  dueDate         DateTime? @map("due_date")
+  completedAt     DateTime? @map("completed_at")
+  
+  taskCount       Int      @default(0) @map("task_count")
+  taskCompleted   Int      @default(0) @map("task_completed")
+  
+  // Lineage
+  sourceSheetId   String?  @map("source_sheet_id")
+  sourceTabName   String?  @map("source_tab_name")
+  sourceRowIndex  Int?     @map("source_row_index")
+  rawRecordId     String?  @map("raw_record_id")
+  
+  syncedAt        DateTime @default(now()) @map("synced_at")
+  
+  // Relations
+  connection      Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  tasks           CanonicalTask[]
+  
+  @@index([tenantId, projectId])
+  @@map("canonical_milestones")
+}
+
+// ============================================================================
+// CANONICAL PERSONS - Normalized people/contributors
+// ============================================================================
+model CanonicalPerson {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  projectId       String   @map("project_id")
+  
+  name            String?
+  email           String?
+  role            String?
+  
+  // Deduplication
+  canonicalEmail  String   @map("canonical_email") // Normalized email or pseudo-id
+  
+  // Stats
+  contributionCount Int    @default(0) @map("contribution_count")
+  
+  syncedAt        DateTime @default(now()) @map("synced_at")
+  
+  @@unique([tenantId, projectId, canonicalEmail])
+  @@map("canonical_persons")
+}
+
+// ============================================================================
+// CANONICAL LINKS - Separated docs/links from tasks
+// ============================================================================
+model CanonicalLink {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  projectId       String   @map("project_id")
+  connectionId    String   @map("connection_id")
+  
+  title           String?
+  url             String
+  typeHint        String?  @map("type_hint") // 'pitch_deck', 'drive', 'figma'
+  
+  // Lineage
+  sourceTabName   String?  @map("source_tab_name")
+  sourceRowIndex  Int?     @map("source_row_index")
+  rawRecordId     String?  @map("raw_record_id")
+  
+  syncedAt        DateTime @default(now()) @map("synced_at")
+  
+  // Relations
+  connection      Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId, projectId])
+  @@map("canonical_links")
+}
+
+// ============================================================================
+// ANALYSIS SIGNALS - Pre-computed metrics for dashboards
+// ============================================================================
+model AnalysisSignal {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  projectId       String   @map("project_id")
+  
+  signalType      SignalType @map("signal_type")
+  
+  computedAt      DateTime @default(now()) @map("computed_at")
+  
+  // The actual metric data
+  value           Json     @db.JsonB
+  
+  // Quality indicators
+  confidenceScore Float    @map("confidence_score") // 0.0 - 1.0
+  methodology     String   // Human-readable explanation
+  
+  // Lineage - which records contributed to this signal
+  derivedFromIds  String[] @map("derived_from_ids")
+  
+  // Status flags
+  isInsufficient  Boolean  @default(false) @map("is_insufficient") // True if not enough data
+  
+  @@unique([tenantId, projectId, signalType])
+  @@index([tenantId, projectId])
+  @@map("analysis_signals")
+}
+
+enum SignalType {
+  TASK_COUNTS_BY_STATUS
+  TASK_VELOCITY_WEEKLY
+  MILESTONE_HEALTH
+  ARTIFACT_ACTIVITY_WEEKLY
+  MEETING_LOAD_WEEKLY
+  PROJECT_PROGRESS
+  THROUGHPUT_WEEKLY
+  CONTRIBUTOR_LEADERBOARD
+  PROOF_INDEX
+  CFD_WEEKLY
+  KPI_SUMMARY
+  EXECUTIVE_SUMMARY
+}
+
+// ============================================================================
+// SYNC JOBS - Track sync progress for UI feedback
+// ============================================================================
+model SyncJob {
+  id              String   @id @default(uuid())
+  tenantId        String   @map("tenant_id")
+  projectId       String   @map("project_id")
+  connectionId    String   @map("connection_id")
+  
+  jobId           String   @unique @map("job_id") // BullMQ job ID
+  
+  status          SyncJobStatus @default(QUEUED)
+  phase           String?       // "fetching", "normalizing", "analyzing"
+  
+  processed       Int      @default(0)
+  total           Int      @default(0)
+  
+  startedAt       DateTime? @map("started_at")
+  finishedAt      DateTime? @map("finished_at")
+  
+  error           String?
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  // Relation
+  connection      Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId, projectId])
+  @@index([connectionId])
+  @@index([jobId])
+  @@map("sync_jobs")
+}
+
+enum SyncJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
