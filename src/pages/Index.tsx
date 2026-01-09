@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TrendingUp, Users, Zap, ArrowRight } from "lucide-react";
+import { TrendingUp, Users, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const feedItems = [
@@ -99,7 +99,7 @@ const Index = () => {
           </div>
 
           <div className="grid lg:grid-cols-[1fr,320px] gap-6">
-            {/* Main Feed */}
+            {/* Main Feed - Continuous scroll (no Load More) */}
             <div className="space-y-6">
               <FeedFilters onFiltersChange={setFilters} />
               
@@ -107,13 +107,6 @@ const Index = () => {
                 {feedItems.map((item) => (
                   <FeedCard key={item.id} {...item} />
                 ))}
-              </div>
-
-              <div className="text-center py-8">
-                <Button variant="outline" size="lg">
-                  Load More
-                  <ArrowRight className="h-4 w-4 ml-2" />
-                </Button>
               </div>
             </div>
 
@@ -149,34 +142,6 @@ const Index = () => {
                 <Button variant="ghost" size="sm" className="w-full mt-3" asChild>
                   <Link to="/people">
                     View All
-                    <ArrowRight className="h-4 w-4 ml-1" />
-                  </Link>
-                </Button>
-              </Card>
-
-              {/* Quick Stats */}
-              <Card className="p-5 gradient-subtle">
-                <div className="flex items-center gap-2 mb-4">
-                  <Zap className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold">Your Activity</h3>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Profile views this week</span>
-                    <span className="font-medium">142</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Project interactions</span>
-                    <span className="font-medium">38</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">New connections</span>
-                    <span className="font-medium">12</span>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" className="w-full mt-4" asChild>
-                  <Link to="/process-analyzer">
-                    View Full Analysis
                     <ArrowRight className="h-4 w-4 ml-1" />
                   </Link>
                 </Button>
