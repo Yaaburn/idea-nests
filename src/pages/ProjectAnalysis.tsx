@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +14,7 @@ import {
 import {
   Download,
   Share2,
+  StickyNote,
   Users,
   Eye,
   Shield,
@@ -24,7 +25,6 @@ import {
   AlertTriangle,
   Target,
   Zap,
-  FileText,
 } from "lucide-react";
 import { OverviewTab } from "@/components/project-analysis/OverviewTab";
 import { ProofOfProcessTab } from "@/components/project-analysis/ProofOfProcessTab";
@@ -33,8 +33,6 @@ import { CapacityTab } from "@/components/project-analysis/CapacityTab";
 import { CollaborationTab } from "@/components/project-analysis/CollaborationTab";
 import { QualityRiskTab } from "@/components/project-analysis/QualityRiskTab";
 import { GoalsOutcomesTab } from "@/components/project-analysis/GoalsOutcomesTab";
-
-export type ViewMode = "leader" | "member" | "investor";
 
 const mockProject = {
   name: "TalentNet Platform",
@@ -47,48 +45,13 @@ const mockProject = {
 const ProjectAnalysis = () => {
   const { projectId } = useParams();
   const [dateRange, setDateRange] = useState("30d");
-  const [viewMode, setViewMode] = useState<ViewMode>("leader");
-  const [activeTab, setActiveTab] = useState("overview");
-
-  // Define tabs with view-based visibility
-  const tabs = useMemo(() => {
-    return [
-      { id: "overview", label: "Overview", icon: LayoutDashboard, visible: true },
-      { id: "proof", label: "Proof of Process", icon: Activity, visible: true },
-      { id: "delivery", label: "Delivery & Flow", icon: TrendingUp, visible: viewMode !== "member" },
-      { id: "capacity", label: "Capacity", icon: Zap, visible: viewMode === "leader" },
-      { id: "collaboration", label: "Collaboration", icon: Users2, visible: true },
-      { id: "quality", label: "Quality & Risk", icon: AlertTriangle, visible: viewMode === "leader" },
-      { id: "goals", label: "Goals", icon: Target, visible: true },
-    ];
-  }, [viewMode]);
-
-  const visibleTabs = tabs.filter((tab) => tab.visible);
-
-  // Reset to overview tab if current tab becomes hidden
-  const handleViewModeChange = (newViewMode: string) => {
-    const mode = newViewMode as ViewMode;
-    setViewMode(mode);
-    
-    // Check if current tab will be visible in the new view mode
-    const currentTabConfig = tabs.find(t => t.id === activeTab);
-    if (currentTabConfig) {
-      let willBeVisible = true;
-      if (activeTab === "delivery" && mode === "member") willBeVisible = false;
-      if (activeTab === "capacity" && mode !== "leader") willBeVisible = false;
-      if (activeTab === "quality" && mode !== "leader") willBeVisible = false;
-      
-      if (!willBeVisible) {
-        setActiveTab("overview");
-      }
-    }
-  };
+  const [viewMode, setViewMode] = useState("leader");
 
   return (
     <AppLayout>
       <div className="p-6 space-y-6">
-        {/* Fixed Header with Global Controls */}
-        <div className="bg-card rounded-xl border border-border p-6 sticky top-0 z-10">
+        {/* Fixed Header */}
+        <div className="bg-card rounded-xl border border-border p-6">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             {/* Project Info */}
             <div className="flex items-center gap-4">
@@ -126,9 +89,9 @@ const ProjectAnalysis = () => {
               </div>
             </div>
 
-            {/* Global Controls - Always visible, pinned top-right */}
+            {/* Controls */}
             <div className="flex flex-wrap items-center gap-3">
-              {/* Time Range */}
+              {/* Date Range */}
               <Select value={dateRange} onValueChange={setDateRange}>
                 <SelectTrigger className="w-[120px]">
                   <SelectValue />
@@ -141,8 +104,8 @@ const ProjectAnalysis = () => {
                 </SelectContent>
               </Select>
 
-              {/* View Mode Selector */}
-              <Select value={viewMode} onValueChange={handleViewModeChange}>
+              {/* View Mode */}
+              <Select value={viewMode} onValueChange={setViewMode}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -175,12 +138,12 @@ const ProjectAnalysis = () => {
                   Export
                 </Button>
                 <Button variant="outline" size="sm">
-                  <FileText className="h-4 w-4 mr-2" />
-                  Add to Data Room
-                </Button>
-                <Button variant="outline" size="sm">
                   <Share2 className="h-4 w-4 mr-2" />
                   Share
+                </Button>
+                <Button variant="outline" size="sm">
+                  <StickyNote className="h-4 w-4 mr-2" />
+                  Note
                 </Button>
               </div>
             </div>
@@ -188,40 +151,56 @@ const ProjectAnalysis = () => {
         </div>
 
         {/* Tabs Navigation */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="bg-card border border-border p-1 h-auto flex-wrap">
-            {visibleTabs.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id} className="gap-2">
-                <tab.icon className="h-4 w-4" />
-                {tab.label}
-              </TabsTrigger>
-            ))}
+            <TabsTrigger value="overview" className="gap-2">
+              <LayoutDashboard className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="proof" className="gap-2">
+              <Activity className="h-4 w-4" />
+              Proof of Process
+            </TabsTrigger>
+            <TabsTrigger value="delivery" className="gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Delivery & Flow
+            </TabsTrigger>
+            <TabsTrigger value="capacity" className="gap-2">
+              <Zap className="h-4 w-4" />
+              Capacity
+            </TabsTrigger>
+            <TabsTrigger value="collaboration" className="gap-2">
+              <Users2 className="h-4 w-4" />
+              Collaboration
+            </TabsTrigger>
+            <TabsTrigger value="quality" className="gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Quality & Risk
+            </TabsTrigger>
+            <TabsTrigger value="goals" className="gap-2">
+              <Target className="h-4 w-4" />
+              Goals
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
             <OverviewTab />
           </TabsContent>
           <TabsContent value="proof">
-            <ProofOfProcessTab viewMode={viewMode} />
+            <ProofOfProcessTab />
           </TabsContent>
-          {viewMode !== "member" && (
-            <TabsContent value="delivery">
-              <DeliveryFlowTab viewMode={viewMode} />
-            </TabsContent>
-          )}
-          {viewMode === "leader" && (
-            <TabsContent value="capacity">
-              <CapacityTab />
-            </TabsContent>
-          )}
+          <TabsContent value="delivery">
+            <DeliveryFlowTab />
+          </TabsContent>
+          <TabsContent value="capacity">
+            <CapacityTab />
+          </TabsContent>
           <TabsContent value="collaboration">
             <CollaborationTab />
           </TabsContent>
-          {viewMode === "leader" && (
-            <TabsContent value="quality">
-              <QualityRiskTab />
-            </TabsContent>
-          )}
+          <TabsContent value="quality">
+            <QualityRiskTab />
+          </TabsContent>
           <TabsContent value="goals">
             <GoalsOutcomesTab />
           </TabsContent>

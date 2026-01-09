@@ -7,8 +7,7 @@ import {
   Layers, 
   RefreshCw,
   AlertCircle,
-  TrendingUp,
-  Lock
+  TrendingUp
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,8 +18,11 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ScatterChart,
+  Scatter,
+  ZAxis,
+  ReferenceLine,
 } from "recharts";
-import type { ViewMode } from "@/pages/ProjectAnalysis";
 
 // Mock CFD data
 const cfdData = [
@@ -42,15 +44,28 @@ const throughputData = [
   { week: "W6", completed: 10 },
 ];
 
+// Mock control chart data (cycle time distribution)
+const controlChartData = [
+  { id: 1, cycleTime: 2.5, date: "Dec 1" },
+  { id: 2, cycleTime: 3.2, date: "Dec 2" },
+  { id: 3, cycleTime: 1.8, date: "Dec 3" },
+  { id: 4, cycleTime: 4.5, date: "Dec 5" },
+  { id: 5, cycleTime: 2.1, date: "Dec 6" },
+  { id: 6, cycleTime: 3.8, date: "Dec 7" },
+  { id: 7, cycleTime: 2.9, date: "Dec 8" },
+  { id: 8, cycleTime: 5.2, date: "Dec 9" },
+  { id: 9, cycleTime: 2.4, date: "Dec 10" },
+  { id: 10, cycleTime: 3.1, date: "Dec 11" },
+  { id: 11, cycleTime: 2.7, date: "Dec 12" },
+  { id: 12, cycleTime: 1.9, date: "Dec 13" },
+];
+
 // Work item aging data
 const agingItems = [
   { id: "TASK-234", title: "Fix mobile responsive issues", days: 8, assignee: "Sarah Kim", status: "In Progress" },
   { id: "TASK-189", title: "Database migration script", days: 6, assignee: "Mike Johnson", status: "Review" },
   { id: "TASK-201", title: "API rate limiting", days: 5, assignee: "Tom Wilson", status: "In Progress" },
 ];
-
-// Dynamic count of items needing attention
-const itemsNeedingAttention = agingItems.length;
 
 // KPI data
 const flowKpis = [
@@ -101,12 +116,15 @@ const flowKpis = [
   },
 ];
 
-interface DeliveryFlowTabProps {
-  viewMode?: ViewMode;
-}
-
-export const DeliveryFlowTab = ({ viewMode = "leader" }: DeliveryFlowTabProps) => {
-  const isInvestorView = viewMode === "investor";
+export const DeliveryFlowTab = () => {
+  // Calculate control chart bounds
+  const cycleTimesValues = controlChartData.map(d => d.cycleTime);
+  const mean = cycleTimesValues.reduce((a, b) => a + b, 0) / cycleTimesValues.length;
+  const stdDev = Math.sqrt(
+    cycleTimesValues.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / cycleTimesValues.length
+  );
+  const upperBound = mean + 2 * stdDev;
+  const lowerBound = Math.max(0, mean - 2 * stdDev);
 
   return (
     <div className="space-y-6">
@@ -120,48 +138,114 @@ export const DeliveryFlowTab = ({ viewMode = "leader" }: DeliveryFlowTabProps) =
       {/* CFD Chart */}
       <CFDChart data={cfdData} />
 
-      {/* Throughput Trend - Full width since Cycle Time Distribution removed */}
-      <div className="bg-card rounded-xl border border-border p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-foreground">Throughput Trend</h3>
-          <p className="text-sm text-muted-foreground">
-            Items completed per week
+      {/* Control Chart & Throughput */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Control Chart */}
+        <div className="bg-card rounded-xl border border-border p-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-foreground">Cycle Time Distribution</h3>
+            <p className="text-sm text-muted-foreground">
+              Control chart showing cycle time variability
+            </p>
+          </div>
+          <div className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="date" 
+                  name="Date"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                />
+                <YAxis 
+                  dataKey="cycleTime" 
+                  name="Cycle Time (days)"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                  domain={[0, 'auto']}
+                />
+                <ZAxis range={[60, 60]} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                  }}
+                  formatter={(value: number) => [`${value.toFixed(1)} days`, "Cycle Time"]}
+                />
+                <ReferenceLine 
+                  y={mean} 
+                  stroke="hsl(var(--primary))" 
+                  strokeDasharray="5 5"
+                  label={{ value: `Mean: ${mean.toFixed(1)}d`, fill: "hsl(var(--primary))", fontSize: 11 }}
+                />
+                <ReferenceLine 
+                  y={upperBound} 
+                  stroke="hsl(var(--destructive))" 
+                  strokeDasharray="3 3"
+                  label={{ value: "UCL", fill: "hsl(var(--destructive))", fontSize: 10 }}
+                />
+                <ReferenceLine 
+                  y={lowerBound} 
+                  stroke="hsl(var(--destructive))" 
+                  strokeDasharray="3 3"
+                  label={{ value: "LCL", fill: "hsl(var(--destructive))", fontSize: 10 }}
+                />
+                <Scatter 
+                  name="Items" 
+                  data={controlChartData} 
+                  fill="hsl(var(--primary))"
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Items outside control limits may indicate process issues
           </p>
         </div>
-        <div className="h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={throughputData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="week"
-                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-              />
-              <YAxis 
-                tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="completed"
-                stroke="hsl(var(--primary))"
-                strokeWidth={2}
-                dot={{ fill: "hsl(var(--primary))", strokeWidth: 2 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="flex items-center gap-2 mt-2">
-          <TrendingUp className="h-4 w-4 text-green-500" />
-          <span className="text-sm text-muted-foreground">
-            Throughput increased 100% over 6 weeks
-          </span>
+
+        {/* Throughput Trend */}
+        <div className="bg-card rounded-xl border border-border p-6">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-foreground">Throughput Trend</h3>
+            <p className="text-sm text-muted-foreground">
+              Items completed per week
+            </p>
+          </div>
+          <div className="h-[250px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={throughputData}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="week"
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                />
+                <YAxis 
+                  tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                  }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="completed"
+                  stroke="hsl(var(--primary))"
+                  strokeWidth={2}
+                  dot={{ fill: "hsl(var(--primary))", strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <TrendingUp className="h-4 w-4 text-green-500" />
+            <span className="text-sm text-muted-foreground">
+              Throughput increased 100% over 6 weeks
+            </span>
+          </div>
         </div>
       </div>
 
@@ -173,60 +257,49 @@ export const DeliveryFlowTab = ({ viewMode = "leader" }: DeliveryFlowTabProps) =
             <p className="text-sm text-muted-foreground">Items stuck longer than 5 days</p>
           </div>
           <Badge variant="outline" className="text-yellow-500 border-yellow-500/20">
-            {itemsNeedingAttention} {itemsNeedingAttention === 1 ? 'item needs' : 'items need'} attention
+            {agingItems.length} items need attention
           </Badge>
         </div>
 
-        {/* Investor view: Locked state for attention summary */}
-        {isInvestorView ? (
-          <div className="bg-muted/50 rounded-lg p-8 text-center">
-            <Lock className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm font-medium text-foreground">Requires Leader access</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Contact project leader to view work item details
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">ID</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Title</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Days</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Assignee</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">ID</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Title</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Days</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Assignee</th>
+                <th className="text-left py-3 px-4 text-sm font-medium text-muted-foreground">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {agingItems.map((item) => (
+                <tr key={item.id} className="border-b border-border/50 hover:bg-muted/50">
+                  <td className="py-3 px-4">
+                    <span className="text-sm font-mono text-primary">{item.id}</span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="text-sm text-foreground">{item.title}</span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className={`h-4 w-4 ${item.days > 7 ? 'text-destructive' : 'text-yellow-500'}`} />
+                      <span className={`text-sm font-medium ${item.days > 7 ? 'text-destructive' : 'text-yellow-500'}`}>
+                        {item.days} days
+                      </span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <span className="text-sm text-muted-foreground">{item.assignee}</span>
+                  </td>
+                  <td className="py-3 px-4">
+                    <Badge variant="outline">{item.status}</Badge>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {agingItems.map((item) => (
-                  <tr key={item.id} className="border-b border-border/50 hover:bg-muted/50">
-                    <td className="py-3 px-4">
-                      <span className="text-sm font-mono text-primary">{item.id}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-foreground">{item.title}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className={`h-4 w-4 ${item.days > 7 ? 'text-destructive' : 'text-yellow-500'}`} />
-                        <span className={`text-sm font-medium ${item.days > 7 ? 'text-destructive' : 'text-yellow-500'}`}>
-                          {item.days} days
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className="text-sm text-muted-foreground">{item.assignee}</span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <Badge variant="outline">{item.status}</Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
