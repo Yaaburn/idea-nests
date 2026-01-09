@@ -3,8 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Heart, MessageCircle, Share2, Bookmark, ArrowRight } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Heart, MessageCircle, Share2, Bookmark } from "lucide-react";
 
 interface FeedCardProps {
   id: string;
@@ -84,18 +83,18 @@ const FeedCard = ({
 
       {/* Content */}
       <div className="p-4">
-        <Link to={`/project/${id}`}>
+        <div>
           <h3 className="text-lg font-bold mb-2 group-hover:text-primary transition-colors">
             {title}
           </h3>
           <p className="text-muted-foreground text-sm line-clamp-2 mb-4">
             {description}
           </p>
-        </Link>
+        </div>
 
         {/* Image */}
         {image && (
-          <Link to={`/project/${id}`} className="block mb-4">
+          <div className="block mb-4">
             <div className="relative rounded-lg overflow-hidden aspect-video">
               <img 
                 src={image} 
@@ -104,7 +103,7 @@ const FeedCard = ({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-          </Link>
+          </div>
         )}
 
         {/* Tags */}
@@ -140,12 +139,6 @@ const FeedCard = ({
             <Bookmark className="h-4 w-4" />
           </Button>
         </div>
-        <Button variant="ghost" size="sm" className="text-primary" asChild>
-          <Link to={`/project/${id}`}>
-            View project
-            <ArrowRight className="h-4 w-4 ml-1" />
-          </Link>
-        </Button>
       </div>
     </Card>
   );
