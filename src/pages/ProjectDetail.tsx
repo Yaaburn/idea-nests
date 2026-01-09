@@ -73,7 +73,7 @@ const ProjectDetail = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
           
           <div className="absolute top-6 left-0 right-0 container mx-auto px-4 lg:px-8">
-            <Button variant="ghost" className="gap-2">
+            <Button variant="ghost" className="gap-2" onClick={() => window.location.href = '/'}>
               <ArrowLeft className="h-4 w-4" />
               Back to Projects
             </Button>
@@ -303,16 +303,13 @@ const ProjectDetail = () => {
             {/* Sidebar */}
             <div className="space-y-6">
               <Card className="p-6 space-y-4 sticky top-24">
-                <Button 
+              <Button 
                   size="lg" 
                   className="w-full" 
                   variant="secondary"
                   onClick={() => setIsApplyModalOpen(true)}
                 >
                   I'm Interested
-                </Button>
-                <Button size="lg" variant="outline" className="w-full">
-                  Request Full Access
                 </Button>
 
                 <div className="pt-4 border-t space-y-3">

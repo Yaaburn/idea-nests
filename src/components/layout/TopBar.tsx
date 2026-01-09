@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Bell, MessageSquare, HelpCircle, Plus } from "lucide-react";
+import { Search, Bell, MessageSquare, Settings, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -19,8 +19,8 @@ const TopBar = () => {
   return (
     <header className="h-16 bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-40">
       <div className="h-full flex items-center justify-between px-6">
-        {/* Search */}
-        <div className="flex-1 max-w-xl">
+        {/* Search - Center */}
+        <div className="flex-1 max-w-xl mx-auto">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
@@ -30,20 +30,18 @@ const TopBar = () => {
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Actions - Right */}
         <div className="flex items-center gap-2 ml-4">
+          {/* New Project - Circular */}
           <Button 
             onClick={() => navigate("/create-project")}
-            className="gradient-primary text-primary-foreground shadow-md hover:shadow-lg transition-shadow"
+            size="icon"
+            className="gradient-primary text-primary-foreground shadow-md hover:shadow-lg transition-shadow rounded-full h-9 w-9"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            New Project
+            <Plus className="h-4 w-4" />
           </Button>
 
-          <Button variant="ghost" size="icon" className="relative">
-            <HelpCircle className="h-5 w-5" />
-          </Button>
-
+          {/* Messages */}
           <Button variant="ghost" size="icon" className="relative" asChild>
             <Link to="/notifications">
               <MessageSquare className="h-5 w-5" />
@@ -53,6 +51,7 @@ const TopBar = () => {
             </Link>
           </Button>
 
+          {/* Notifications */}
           <Button variant="ghost" size="icon" className="relative" asChild>
             <Link to="/notifications">
               <Bell className="h-5 w-5" />
@@ -62,7 +61,14 @@ const TopBar = () => {
             </Link>
           </Button>
 
-          {/* User Menu */}
+          {/* Settings */}
+          <Button variant="ghost" size="icon" asChild>
+            <Link to="/settings">
+              <Settings className="h-5 w-5" />
+            </Link>
+          </Button>
+
+          {/* User Avatar */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-10 w-10 rounded-full">

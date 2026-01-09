@@ -2,13 +2,9 @@ import { NavLink, useLocation } from "react-router-dom";
 import { 
   Home, 
   FolderKanban, 
-  Users, 
-  Activity, 
-  Bell,
-  Settings,
+  Briefcase,
   ChevronLeft,
-  ChevronRight,
-  Briefcase
+  ChevronRight
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,15 +12,8 @@ import { useState } from "react";
 
 const navItems = [
   { icon: Home, label: "Home", path: "/" },
-  { icon: FolderKanban, label: "Projects", path: "/browse" },
-  { icon: Briefcase, label: "Workspace", path: "/workspace" },
-  { icon: Activity, label: "Project Analysis", path: "/project-analysis/demo" },
-  { icon: Users, label: "People", path: "/people" },
-];
-
-const bottomItems = [
-  { icon: Bell, label: "Notifications", path: "/notifications" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+  { icon: FolderKanban, label: "Your Projects", path: "/browse" },
+  { icon: Briefcase, label: "Portfolio", path: "/profile/1" },
 ];
 
 const Sidebar = () => {
@@ -34,7 +23,7 @@ const Sidebar = () => {
   return (
     <aside 
       className={cn(
-        "fixed left-0 top-0 h-screen bg-sidebar flex flex-col z-50 transition-all duration-300",
+        "fixed left-0 top-0 h-screen bg-sidebar flex flex-col z-50 transition-all duration-300 border-r border-sidebar-border",
         collapsed ? "w-16" : "w-64"
       )}
     >
@@ -81,29 +70,6 @@ const Sidebar = () => {
           );
         })}
       </nav>
-
-      {/* Bottom Navigation */}
-      <div className="py-4 px-2 border-t border-sidebar-border space-y-1">
-        {bottomItems.map((item) => {
-          const isActive = location.pathname === item.path;
-          
-          return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
-                "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/10",
-                isActive && "bg-sidebar-primary/20 text-sidebar-foreground font-medium",
-                collapsed && "justify-center"
-              )}
-            >
-              <item.icon className={cn("h-5 w-5 flex-shrink-0", isActive && "text-sidebar-primary")} />
-              {!collapsed && <span>{item.label}</span>}
-            </NavLink>
-          );
-        })}
-      </div>
 
       {/* Collapse Toggle */}
       <div className="p-2 border-t border-sidebar-border">
