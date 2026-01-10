@@ -18,6 +18,8 @@ import Workspace from "./pages/Workspace";
 import People from "./pages/People";
 import Notifications from "./pages/Notifications";
 import ProjectAnalysis from "./pages/ProjectAnalysis";
+import YourProjects from "./pages/YourProjects";
+import ProjectWorkspace from "./pages/ProjectWorkspace";
 
 const queryClient = new QueryClient();
 
@@ -38,8 +40,10 @@ const App = () => (
           <Route path="/settings" element={<Settings />} />
           <Route path="/integrations" element={<IntegrationHub />} />
           <Route path="/process-analyzer" element={<ProcessAnalyzer />} />
+          <Route path="/your-projects" element={<YourProjects />} />
+          <Route path="/workspace/:projectId" element={<ProjectWorkspace />} />
+          <Route path="/workspace/:projectId/:section" element={<ProjectWorkspace />} />
           <Route path="/workspace" element={<Workspace />} />
-          <Route path="/workspace/:projectId" element={<Workspace />} />
           <Route path="/people" element={<People />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/project-analysis/:projectId" element={<ProjectAnalysis />} />
