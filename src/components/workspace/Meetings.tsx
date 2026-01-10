@@ -11,7 +11,6 @@ import {
   Plus,
   Play,
   MoreHorizontal,
-  X,
   ChevronDown,
   ChevronUp,
   MapPin,
@@ -147,6 +146,10 @@ const Meetings = () => {
     };
 
     setMeetingsList(prev => [...prev, newMeeting]);
+    closeModal();
+  };
+
+  const closeModal = () => {
     setShowScheduleModal(false);
     setShowDetails(false);
     setScheduleData({
@@ -280,24 +283,22 @@ const Meetings = () => {
         </Card>
       </div>
 
-      {/* Schedule Meeting Modal with iOS-style blur */}
+      {/* Schedule Meeting Modal - iOS-style blur fullscreen */}
       {showScheduleModal && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center"
-          onClick={() => {
-            setShowScheduleModal(false);
-            setShowDetails(false);
-          }}
+          className="fixed inset-0 z-[100] flex items-center justify-center"
+          onClick={closeModal}
+          onKeyDown={(e) => e.key === "Escape" && closeModal()}
         >
-          {/* Backdrop with blur */}
-          <div className="absolute inset-0 bg-background/60 backdrop-blur-xl" />
+          {/* Backdrop with iOS-style blur - covers entire viewport */}
+          <div className="fixed inset-0 bg-background/40 backdrop-blur-2xl" />
           
-          {/* Modal Card */}
+          {/* Modal Card - centered, no X button */}
           <div
-            className="relative bg-popover border rounded-xl shadow-2xl p-6 w-[400px] max-w-[90vw] animate-fade-in"
+            className="relative bg-popover border rounded-xl shadow-2xl p-6 w-[400px] max-w-[90vw] animate-fade-in z-[101]"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header - No X button, click outside to dismiss */}
+            {/* Header - NO X button per spec */}
             <h3 className="font-semibold text-xl mb-4">Schedule Meeting</h3>
 
             {/* Title */}
@@ -392,13 +393,7 @@ const Meetings = () => {
 
             {/* Actions */}
             <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setShowScheduleModal(false);
-                  setShowDetails(false);
-                }}
-              >
+              <Button variant="ghost" onClick={closeModal}>
                 Cancel
               </Button>
               <Button

@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import AppLayout from "@/components/layout/AppLayout";
 
 // Workspace tab components
 import TaskBoard from "@/components/workspace/TaskBoard";
@@ -55,16 +56,14 @@ const getProjectData = (id: string) => ({
   notifications: 5,
 });
 
-const ProjectWorkspace = () => {
+const ProjectWorkspaceContent = () => {
   const { projectId, section } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   
   const [activeSection, setActiveSection] = useState<WorkspaceSection>(
     (section as WorkspaceSection) || "tasks"
   );
   const [isHoveringWorkspace, setIsHoveringWorkspace] = useState(false);
-  const [innerSidebarOpen, setInnerSidebarOpen] = useState(true);
 
   const project = getProjectData(projectId || "1");
 
@@ -93,14 +92,9 @@ const ProjectWorkspace = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
-      {/* Inner Sidebar (Project-specific) - positioned after outer rail */}
-      <aside
-        className={cn(
-          "fixed left-16 top-0 h-screen bg-sidebar flex flex-col z-40 transition-all duration-200 border-r border-sidebar-border",
-          innerSidebarOpen ? "w-56" : "w-0 overflow-hidden"
-        )}
-      >
+    <div className="flex h-[calc(100vh-4rem)]">
+      {/* Inner Sidebar (Project-specific) */}
+      <aside className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col flex-shrink-0 animate-fade-in">
         {/* Project Header */}
         <div className="p-4 border-b border-sidebar-border">
           <h2 className="font-bold text-sidebar-foreground truncate">{project.name}</h2>
@@ -179,14 +173,9 @@ const ProjectWorkspace = () => {
       </aside>
 
       {/* Main Content Area */}
-      <div
-        className={cn(
-          "flex-1 flex flex-col transition-all duration-300",
-          innerSidebarOpen ? "ml-72" : "ml-16"
-        )}
-      >
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Sticky Top Header Bar */}
-        <header className="sticky top-0 z-30 h-14 bg-background border-b border-border flex items-center justify-between px-6">
+        <header className="h-14 bg-background border-b border-border flex items-center justify-between px-6 flex-shrink-0">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm">
             <button
@@ -214,19 +203,7 @@ const ProjectWorkspace = () => {
         </header>
 
         {/* Content Slot */}
-        <main className="flex-1 overflow-auto">
-          {/* Welcome Sticker when hovering Workspace */}
-          {isHoveringWorkspace && isWorkspaceSection && (
-            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-fade-in">
-              <div className="bg-gradient-to-r from-primary/20 to-secondary/20 backdrop-blur-sm rounded-2xl px-6 py-4 border border-primary/30 shadow-lg flex items-center gap-3">
-                <Sparkles className="h-6 w-6 text-primary" />
-                <span className="font-medium text-foreground">
-                  Welcome to Project {project.name.split(" - ")[0]} workspace!
-                </span>
-              </div>
-            </div>
-          )}
-
+        <main className="flex-1 overflow-auto relative">
           {/* Render Active Section */}
           <div className="p-6">
             {activeSection === "tasks" && <TaskBoard />}
@@ -242,6 +219,15 @@ const ProjectWorkspace = () => {
         </main>
       </div>
     </div>
+  );
+};
+
+// Wrap with AppLayout to keep outer Sidebar
+const ProjectWorkspace = () => {
+  return (
+    <AppLayout>
+      <ProjectWorkspaceContent />
+    </AppLayout>
   );
 };
 

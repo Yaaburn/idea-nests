@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,9 @@ import {
   ChevronDown,
   ChevronUp,
   MapPin,
-  Users
+  Users,
+  Trash2,
+  Pencil
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -106,16 +108,19 @@ const mockAttendees = [
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const SLOT_HEIGHT = 20; // pixels per 15-minute slot
+const HOUR_HEIGHT = SLOT_HEIGHT * 4; // 80px per hour
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 21;
+const TIME_COLUMN_WIDTH = 72; // Fixed width for time column
 
 const Planner = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const [currentDate, setCurrentDate] = useState(new Date(2025, 0, 13)); // Jan 13, 2025
   const [events, setEvents] = useState(mockEvents);
   
-  // Quick Event Popover state
-  const [showQuickEvent, setShowQuickEvent] = useState(false);
+  // Popover state - unified for create and edit
+  const [popoverMode, setPopoverMode] = useState<"create" | "edit" | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [quickEventData, setQuickEventData] = useState({
     date: "",
     startTime: "09:00",
@@ -126,13 +131,14 @@ const Planner = () => {
     description: "",
   });
   const [showDetails, setShowDetails] = useState(false);
-  const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
+  const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0, anchor: "bottom" as "top" | "bottom" | "left" | "right" });
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Drag to create state
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ date: Date; hour: number; minute: number } | null>(null);
   const [dragEnd, setDragEnd] = useState<{ date: Date; hour: number; minute: number } | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
 
   const navigateDate = (direction: "prev" | "next") => {
     const newDate = new Date(currentDate);
@@ -208,7 +214,7 @@ const Planner = () => {
     
     const duration = endMinutes - startMinutes;
     const topOffset = ((startMinutes - dayStartMinutes) / 15) * SLOT_HEIGHT;
-    const height = Math.max((duration / 15) * SLOT_HEIGHT, SLOT_HEIGHT); // Minimum 1 slot height
+    const height = Math.max((duration / 15) * SLOT_HEIGHT, SLOT_HEIGHT);
     
     return {
       top: `${topOffset}px`,
@@ -216,26 +222,86 @@ const Planner = () => {
     };
   };
 
+  // Smart popover positioning
+  const calculateSmartPosition = (clickX: number, clickY: number) => {
+    const padding = 16;
+    const popoverWidth = 360;
+    const popoverHeight = 420;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let x = clickX;
+    let y = clickY;
+    let anchor: "top" | "bottom" | "left" | "right" = "bottom";
+
+    // Horizontal positioning
+    if (clickX + popoverWidth / 2 > viewportWidth - padding) {
+      x = viewportWidth - popoverWidth - padding;
+      anchor = "left";
+    } else if (clickX - popoverWidth / 2 < padding) {
+      x = padding;
+      anchor = "right";
+    } else {
+      x = clickX - popoverWidth / 2;
+    }
+
+    // Vertical positioning
+    if (clickY + popoverHeight > viewportHeight - padding) {
+      y = Math.max(padding, clickY - popoverHeight - 10);
+      anchor = "top";
+    } else {
+      y = clickY + 10;
+      anchor = "bottom";
+    }
+
+    // Clamp to viewport
+    x = Math.max(padding, Math.min(x, viewportWidth - popoverWidth - padding));
+    y = Math.max(padding, Math.min(y, viewportHeight - popoverHeight - padding));
+
+    return { x, y, anchor };
+  };
+
   // Handle time slot click for quick event creation
-  const handleSlotClick = (date: Date, hour: number, e: React.MouseEvent) => {
-    const rect = e.currentTarget.getBoundingClientRect();
+  const openCreatePopover = (date: Date, hour: number, minute: number, e: React.MouseEvent) => {
     const dateStr = date.toISOString().split("T")[0];
+    const endMinute = minute + 60; // Default 1 hour
+    const endHour = hour + Math.floor(endMinute / 60);
+    const endMin = endMinute % 60;
     
     setQuickEventData({
       date: dateStr,
-      startTime: `${hour.toString().padStart(2, "0")}:00`,
-      endTime: `${(hour + 1).toString().padStart(2, "0")}:00`,
+      startTime: `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`,
+      endTime: `${endHour.toString().padStart(2, "0")}:${endMin.toString().padStart(2, "0")}`,
       title: "",
       attendees: [],
       location: "",
       description: "",
     });
     
-    setPopoverPosition({
-      x: rect.left + rect.width / 2,
-      y: rect.top,
+    const position = calculateSmartPosition(e.clientX, e.clientY);
+    setPopoverPosition(position);
+    setSelectedEvent(null);
+    setPopoverMode("create");
+  };
+
+  // Handle event click for edit
+  const openEditPopover = (event: CalendarEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    setSelectedEvent(event);
+    setQuickEventData({
+      date: event.date,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      title: event.title,
+      attendees: event.attendees?.map((_, i) => (i + 1).toString()) || [],
+      location: event.location || "",
+      description: event.description || "",
     });
-    setShowQuickEvent(true);
+    
+    const position = calculateSmartPosition(e.clientX, e.clientY);
+    setPopoverPosition(position);
+    setPopoverMode("edit");
   };
 
   // Handle drag to create
@@ -276,12 +342,10 @@ const Planner = () => {
         description: "",
       });
       
-      const rect = e.currentTarget.getBoundingClientRect();
-      setPopoverPosition({
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-      });
-      setShowQuickEvent(true);
+      const position = calculateSmartPosition(e.clientX, e.clientY);
+      setPopoverPosition(position);
+      setSelectedEvent(null);
+      setPopoverMode("create");
     }
     setIsDragging(false);
     setDragStart(null);
@@ -291,24 +355,59 @@ const Planner = () => {
   const handleSaveEvent = () => {
     if (!quickEventData.title.trim()) return;
     
-    const newEvent: CalendarEvent = {
-      id: `event-${Date.now()}`,
-      title: quickEventData.title,
-      date: quickEventData.date,
-      startTime: quickEventData.startTime,
-      endTime: quickEventData.endTime,
-      color: "bg-primary",
-      type: "meeting",
-      attendees: quickEventData.attendees.map(id => {
-        const attendee = mockAttendees.find(a => a.id === id);
-        return attendee ? { name: attendee.name, avatar: attendee.avatar } : { name: "Unknown", avatar: "" };
-      }),
-      location: quickEventData.location,
-      description: quickEventData.description,
-    };
+    if (popoverMode === "edit" && selectedEvent) {
+      // Update existing event
+      setEvents(prev => prev.map(evt => 
+        evt.id === selectedEvent.id 
+          ? {
+              ...evt,
+              title: quickEventData.title,
+              date: quickEventData.date,
+              startTime: quickEventData.startTime,
+              endTime: quickEventData.endTime,
+              attendees: quickEventData.attendees.map(id => {
+                const attendee = mockAttendees.find(a => a.id === id);
+                return attendee ? { name: attendee.name, avatar: attendee.avatar } : { name: "Unknown", avatar: "" };
+              }),
+              location: quickEventData.location,
+              description: quickEventData.description,
+            }
+          : evt
+      ));
+    } else {
+      // Create new event
+      const newEvent: CalendarEvent = {
+        id: `event-${Date.now()}`,
+        title: quickEventData.title,
+        date: quickEventData.date,
+        startTime: quickEventData.startTime,
+        endTime: quickEventData.endTime,
+        color: "bg-primary",
+        type: "meeting",
+        attendees: quickEventData.attendees.map(id => {
+          const attendee = mockAttendees.find(a => a.id === id);
+          return attendee ? { name: attendee.name, avatar: attendee.avatar } : { name: "Unknown", avatar: "" };
+        }),
+        location: quickEventData.location,
+        description: quickEventData.description,
+      };
+      
+      setEvents(prev => [...prev, newEvent]);
+    }
     
-    setEvents(prev => [...prev, newEvent]);
-    setShowQuickEvent(false);
+    closePopover();
+  };
+
+  const handleDeleteEvent = () => {
+    if (selectedEvent) {
+      setEvents(prev => prev.filter(evt => evt.id !== selectedEvent.id));
+      closePopover();
+    }
+  };
+
+  const closePopover = () => {
+    setPopoverMode(null);
+    setSelectedEvent(null);
     setShowDetails(false);
   };
 
@@ -325,24 +424,15 @@ const Planner = () => {
   const monthDays = getMonthDays();
   const today = new Date();
 
-  // Generate time slots (15-min increments)
-  const timeSlots = useMemo(() => {
-    const slots = [];
-    for (let hour = DAY_START_HOUR; hour < DAY_END_HOUR; hour++) {
-      for (let minute = 0; minute < 60; minute += 15) {
-        slots.push({ hour, minute });
-      }
-    }
-    return slots;
-  }, []);
-
   // Hours for display
   const displayHours = useMemo(() => {
     return Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) => DAY_START_HOUR + i);
   }, []);
 
+  const totalGridHeight = displayHours.length * HOUR_HEIGHT;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" ref={containerRef}>
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -394,8 +484,9 @@ const Planner = () => {
                 location: "",
                 description: "",
               });
-              setPopoverPosition({ x: window.innerWidth / 2, y: 200 });
-              setShowQuickEvent(true);
+              setPopoverPosition({ x: window.innerWidth / 2 - 180, y: 200, anchor: "bottom" });
+              setSelectedEvent(null);
+              setPopoverMode("create");
             }}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -433,7 +524,7 @@ const Planner = () => {
                       "min-h-[100px] p-2 border-r border-b last:border-r-0 cursor-pointer hover:bg-muted/50 transition-colors",
                       !isCurrentMonth && "bg-muted/30 text-muted-foreground"
                     )}
-                    onClick={(e) => handleSlotClick(date, 9, e)}
+                    onClick={(e) => openCreatePopover(date, 9, 0, e)}
                   >
                     <div
                       className={cn(
@@ -448,9 +539,10 @@ const Planner = () => {
                         <div
                           key={event.id}
                           className={cn(
-                            "text-xs px-1.5 py-0.5 rounded truncate text-white",
+                            "text-xs px-1.5 py-0.5 rounded truncate text-white cursor-pointer hover:opacity-80",
                             event.color
                           )}
+                          onClick={(e) => openEditPopover(event, e)}
                         >
                           {event.title}
                         </div>
@@ -468,12 +560,15 @@ const Planner = () => {
           </div>
         )}
 
-        {/* Week View with proper 15-min slot rendering */}
+        {/* Week View - CSS Grid based for perfect alignment */}
         {viewMode === "week" && (
           <div>
-            {/* Day Headers */}
-            <div className="grid grid-cols-8 border-b">
-              <div className="p-3 border-r w-20" />
+            {/* Header Row - uses same grid structure */}
+            <div 
+              className="grid border-b"
+              style={{ gridTemplateColumns: `${TIME_COLUMN_WIDTH}px repeat(7, 1fr)` }}
+            >
+              <div className="p-3 border-r" /> {/* Empty cell for time column */}
               {weekDays.map((date, i) => {
                 const isToday = date.toDateString() === today.toDateString();
                 return (
@@ -497,29 +592,39 @@ const Planner = () => {
                 );
               })}
             </div>
-            {/* Time Grid with 15-min slots */}
+
+            {/* Time Grid Body */}
             <div 
-              ref={gridRef}
               className="max-h-[600px] overflow-y-auto"
               onMouseUp={handleMouseUp}
             >
-              <div className="grid grid-cols-8">
-                {/* Time labels column */}
-                <div className="border-r w-20">
-                  {displayHours.map((hour) => (
+              <div 
+                className="grid relative"
+                style={{ 
+                  gridTemplateColumns: `${TIME_COLUMN_WIDTH}px repeat(7, 1fr)`,
+                  height: `${totalGridHeight}px`
+                }}
+              >
+                {/* Time Labels Column */}
+                <div className="border-r relative">
+                  {displayHours.map((hour, idx) => (
                     <div 
-                      key={hour} 
-                      className="text-xs text-muted-foreground text-right pr-2 relative"
-                      style={{ height: `${SLOT_HEIGHT * 4}px` }}
+                      key={hour}
+                      className="absolute text-xs text-muted-foreground text-right pr-2 w-full"
+                      style={{ 
+                        top: `${idx * HOUR_HEIGHT}px`,
+                        height: `${HOUR_HEIGHT}px`,
+                        lineHeight: '1'
+                      }}
                     >
-                      <span className="absolute -top-2 right-2">
+                      <span className="relative -top-2">
                         {hour.toString().padStart(2, "0")}:00
                       </span>
                     </div>
                   ))}
                 </div>
-                
-                {/* Day columns */}
+
+                {/* Day Columns */}
                 {weekDays.map((date, dayIndex) => {
                   const dayEvents = getEventsForDate(date);
                   const isToday = date.toDateString() === today.toDateString();
@@ -531,32 +636,40 @@ const Planner = () => {
                         "relative border-r last:border-r-0",
                         isToday && "bg-primary/5"
                       )}
-                      style={{ height: `${SLOT_HEIGHT * 4 * (DAY_END_HOUR - DAY_START_HOUR)}px` }}
                     >
-                      {/* Hour lines */}
-                      {displayHours.map((hour) => (
+                      {/* Hour grid lines */}
+                      {displayHours.map((hour, idx) => (
                         <div
                           key={hour}
                           className="absolute w-full border-t border-border/50"
-                          style={{ top: `${(hour - DAY_START_HOUR) * SLOT_HEIGHT * 4}px` }}
+                          style={{ top: `${idx * HOUR_HEIGHT}px` }}
                         />
                       ))}
-                      
-                      {/* Clickable slots for creating events */}
-                      {displayHours.map((hour) => (
+
+                      {/* Half-hour grid lines (lighter) */}
+                      {displayHours.map((hour, idx) => (
                         <div
-                          key={hour}
+                          key={`half-${hour}`}
+                          className="absolute w-full border-t border-border/20"
+                          style={{ top: `${idx * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }}
+                        />
+                      ))}
+
+                      {/* Clickable hour slots */}
+                      {displayHours.map((hour, idx) => (
+                        <div
+                          key={`slot-${hour}`}
                           className="absolute w-full cursor-pointer hover:bg-muted/30 transition-colors"
                           style={{ 
-                            top: `${(hour - DAY_START_HOUR) * SLOT_HEIGHT * 4}px`,
-                            height: `${SLOT_HEIGHT * 4}px`
+                            top: `${idx * HOUR_HEIGHT}px`,
+                            height: `${HOUR_HEIGHT}px`
                           }}
-                          onClick={(e) => handleSlotClick(date, hour, e)}
+                          onClick={(e) => openCreatePopover(date, hour, 0, e)}
                           onMouseDown={(e) => handleMouseDown(date, hour, 0, e)}
                           onMouseMove={() => handleMouseMove(hour, 0)}
                         />
                       ))}
-                      
+
                       {/* Drag selection indicator */}
                       {isDragging && dragStart && dragEnd && 
                        dragStart.date.toDateString() === date.toDateString() && (
@@ -564,25 +677,26 @@ const Planner = () => {
                           className="absolute left-1 right-1 bg-primary/30 rounded border-2 border-primary border-dashed pointer-events-none z-10"
                           style={{
                             top: `${((Math.min(dragStart.hour, dragEnd.hour) - DAY_START_HOUR) * 60 + Math.min(dragStart.minute, dragEnd.minute)) / 15 * SLOT_HEIGHT}px`,
-                            height: `${Math.abs((dragEnd.hour * 60 + dragEnd.minute) - (dragStart.hour * 60 + dragStart.minute)) / 15 * SLOT_HEIGHT}px`,
+                            height: `${Math.max(Math.abs((dragEnd.hour * 60 + dragEnd.minute) - (dragStart.hour * 60 + dragStart.minute)) / 15 * SLOT_HEIGHT, SLOT_HEIGHT)}px`,
                           }}
                         />
                       )}
-                      
-                      {/* Events - properly positioned by duration */}
+
+                      {/* Events */}
                       {dayEvents.map((event) => {
                         const style = getEventStyle(event);
                         return (
                           <div
                             key={event.id}
                             className={cn(
-                              "absolute left-1 right-1 px-2 py-1 rounded text-white text-xs overflow-hidden cursor-pointer hover:opacity-90 transition-opacity z-20",
+                              "absolute left-1 right-1 px-2 py-1 rounded text-white text-xs overflow-hidden cursor-pointer hover:opacity-90 hover:shadow-md transition-all z-20",
                               event.color
                             )}
                             style={style}
+                            onClick={(e) => openEditPopover(event, e)}
                           >
                             <div className="font-medium truncate">{event.title}</div>
-                            <div className="opacity-80 truncate">
+                            <div className="opacity-80 truncate text-[10px]">
                               {event.startTime} - {event.endTime}
                             </div>
                           </div>
@@ -596,52 +710,68 @@ const Planner = () => {
           </div>
         )}
 
-        {/* Day View */}
+        {/* Day View - CSS Grid based */}
         {viewMode === "day" && (
           <div className="max-h-[600px] overflow-y-auto">
-            <div className="grid grid-cols-[80px_1fr]">
-              {/* Time labels */}
-              <div className="border-r">
-                {displayHours.map((hour) => (
+            <div 
+              className="grid relative"
+              style={{ 
+                gridTemplateColumns: `${TIME_COLUMN_WIDTH}px 1fr`,
+                height: `${totalGridHeight}px`
+              }}
+            >
+              {/* Time Labels */}
+              <div className="border-r relative">
+                {displayHours.map((hour, idx) => (
                   <div 
-                    key={hour} 
-                    className="text-xs text-muted-foreground text-right pr-2 relative"
-                    style={{ height: `${SLOT_HEIGHT * 4}px` }}
+                    key={hour}
+                    className="absolute text-xs text-muted-foreground text-right pr-2 w-full"
+                    style={{ 
+                      top: `${idx * HOUR_HEIGHT}px`,
+                      height: `${HOUR_HEIGHT}px`,
+                      lineHeight: '1'
+                    }}
                   >
-                    <span className="absolute -top-2 right-2">
+                    <span className="relative -top-2">
                       {hour.toString().padStart(2, "0")}:00
                     </span>
                   </div>
                 ))}
               </div>
-              
-              {/* Day column */}
-              <div
-                className="relative"
-                style={{ height: `${SLOT_HEIGHT * 4 * (DAY_END_HOUR - DAY_START_HOUR)}px` }}
-              >
-                {/* Hour lines */}
-                {displayHours.map((hour) => (
+
+              {/* Day Column */}
+              <div className="relative">
+                {/* Hour grid lines */}
+                {displayHours.map((hour, idx) => (
                   <div
                     key={hour}
                     className="absolute w-full border-t border-border/50"
-                    style={{ top: `${(hour - DAY_START_HOUR) * SLOT_HEIGHT * 4}px` }}
+                    style={{ top: `${idx * HOUR_HEIGHT}px` }}
                   />
                 ))}
-                
-                {/* Clickable slots */}
-                {displayHours.map((hour) => (
+
+                {/* Half-hour grid lines */}
+                {displayHours.map((hour, idx) => (
                   <div
-                    key={hour}
+                    key={`half-${hour}`}
+                    className="absolute w-full border-t border-border/20"
+                    style={{ top: `${idx * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }}
+                  />
+                ))}
+
+                {/* Clickable slots */}
+                {displayHours.map((hour, idx) => (
+                  <div
+                    key={`slot-${hour}`}
                     className="absolute w-full cursor-pointer hover:bg-muted/30 transition-colors"
                     style={{ 
-                      top: `${(hour - DAY_START_HOUR) * SLOT_HEIGHT * 4}px`,
-                      height: `${SLOT_HEIGHT * 4}px`
+                      top: `${idx * HOUR_HEIGHT}px`,
+                      height: `${HOUR_HEIGHT}px`
                     }}
-                    onClick={(e) => handleSlotClick(currentDate, hour, e)}
+                    onClick={(e) => openCreatePopover(currentDate, hour, 0, e)}
                   />
                 ))}
-                
+
                 {/* Events */}
                 {getEventsForDate(currentDate).map((event) => {
                   const style = getEventStyle(event);
@@ -649,10 +779,11 @@ const Planner = () => {
                     <div
                       key={event.id}
                       className={cn(
-                        "absolute left-2 right-2 px-3 py-2 rounded text-white overflow-hidden cursor-pointer hover:opacity-90 transition-opacity z-20",
+                        "absolute left-2 right-2 px-3 py-2 rounded text-white overflow-hidden cursor-pointer hover:opacity-90 hover:shadow-md transition-all z-20",
                         event.color
                       )}
                       style={style}
+                      onClick={(e) => openEditPopover(event, e)}
                     >
                       <div className="font-medium">{event.title}</div>
                       <div className="text-sm opacity-80 flex items-center gap-1 mt-1">
@@ -668,34 +799,31 @@ const Planner = () => {
         )}
       </Card>
 
-      {/* Quick Event Popover (NO backdrop blur) */}
-      {showQuickEvent && (
+      {/* Quick Event / Edit Popover (NO backdrop blur for Planner) */}
+      {popoverMode && (
         <div 
           className="fixed inset-0 z-50"
-          onClick={() => {
-            setShowQuickEvent(false);
-            setShowDetails(false);
-          }}
+          onClick={closePopover}
         >
           <div
+            ref={popoverRef}
             className="absolute bg-popover border rounded-xl shadow-xl p-4 w-[360px] animate-fade-in"
             style={{
-              left: Math.min(popoverPosition.x - 180, window.innerWidth - 380),
-              top: Math.min(popoverPosition.y, window.innerHeight - 400),
+              left: popoverPosition.x,
+              top: popoverPosition.y,
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-lg">Quick Event</h3>
+              <h3 className="font-semibold text-lg">
+                {popoverMode === "edit" ? "Edit Event" : "Quick Event"}
+              </h3>
               <Button
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
-                onClick={() => {
-                  setShowQuickEvent(false);
-                  setShowDetails(false);
-                }}
+                onClick={closePopover}
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -792,30 +920,37 @@ const Planner = () => {
             )}
 
             {/* Actions */}
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setShowQuickEvent(false);
-                  setShowDetails(false);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="gradient-primary text-white"
-                onClick={handleSaveEvent}
-                disabled={!quickEventData.title.trim()}
-              >
-                Save
-              </Button>
+            <div className="flex justify-between">
+              {popoverMode === "edit" && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDeleteEvent}
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              )}
+              <div className={cn("flex gap-2", popoverMode !== "edit" && "ml-auto")}>
+                <Button variant="ghost" onClick={closePopover}>
+                  Cancel
+                </Button>
+                <Button
+                  className="gradient-primary text-white"
+                  onClick={handleSaveEvent}
+                  disabled={!quickEventData.title.trim()}
+                >
+                  Save
+                </Button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* Empty State */}
-      {viewMode === "day" && getEventsForDate(currentDate).length === 0 && !showQuickEvent && (
+      {viewMode === "day" && getEventsForDate(currentDate).length === 0 && !popoverMode && (
         <div className="text-center py-8 text-muted-foreground">
           <CalendarIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
           <p>No events scheduled for this day</p>
@@ -833,8 +968,9 @@ const Planner = () => {
                 location: "",
                 description: "",
               });
-              setPopoverPosition({ x: window.innerWidth / 2, y: 200 });
-              setShowQuickEvent(true);
+              setPopoverPosition({ x: window.innerWidth / 2 - 180, y: 200, anchor: "bottom" });
+              setSelectedEvent(null);
+              setPopoverMode("create");
             }}
           >
             Add an event
