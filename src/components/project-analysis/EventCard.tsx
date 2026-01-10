@@ -11,11 +11,20 @@ import {
   AlertTriangle, 
   DollarSign,
   ExternalLink,
-  Users
+  Users,
+  ShieldCheck,
+  Lock
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type { ViewMode } from "@/pages/ProjectAnalysis";
 
 export type EventType = 
   | "milestone" 
@@ -52,6 +61,7 @@ export interface ProofEvent {
   whyItMatters?: string;
   tags: string[];
   impact?: "high" | "medium" | "low";
+  isLeaderPermissioned?: boolean; // For investor view green highlight
 }
 
 const eventConfig: Record<EventType, { icon: typeof Target; color: string; bgColor: string; label: string }> = {
@@ -76,11 +86,16 @@ const impactStyles = {
 interface EventCardProps {
   event: ProofEvent;
   className?: string;
+  viewMode?: ViewMode;
 }
 
-export const EventCard = ({ event, className }: EventCardProps) => {
+export const EventCard = ({ event, className, viewMode = "leader" }: EventCardProps) => {
   const config = eventConfig[event.type];
   const Icon = config.icon;
+
+  // Determine if evidence links should be clickable
+  const isClickable = viewMode !== "investor";
+  const isLeaderPermissioned = event.isLeaderPermissioned;
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat("en-US", {
@@ -91,10 +106,18 @@ export const EventCard = ({ event, className }: EventCardProps) => {
     }).format(date);
   };
 
+  const handleEvidenceClick = (url: string) => {
+    if (isClickable) {
+      window.open(url, "_blank");
+    }
+  };
+
   return (
     <div className={cn(
       "bg-card rounded-lg border border-border p-4 hover:shadow-md transition-all",
       event.impact && `border-l-4 ${impactStyles[event.impact]}`,
+      // Green highlight for leader-permissioned evidence in investor view
+      viewMode === "investor" && isLeaderPermissioned && "ring-2 ring-green-500/50 bg-green-500/5",
       className
     )}>
       {/* Header */}
@@ -110,6 +133,13 @@ export const EventCard = ({ event, className }: EventCardProps) => {
             {event.impact === "high" && (
               <Badge variant="default" className="text-xs bg-primary/20 text-primary">
                 High Impact
+              </Badge>
+            )}
+            {/* Leader-permissioned badge for investor view */}
+            {viewMode === "investor" && isLeaderPermissioned && (
+              <Badge variant="outline" className="text-xs text-green-500 border-green-500/30 bg-green-500/10">
+                <ShieldCheck className="h-3 w-3 mr-1" />
+                Verified
               </Badge>
             )}
           </div>
@@ -179,16 +209,38 @@ export const EventCard = ({ event, className }: EventCardProps) => {
           <p className="text-xs text-muted-foreground mb-2">Evidence</p>
           <div className="flex flex-wrap gap-2">
             {event.evidenceLinks.map((link, index) => (
-              <Button
-                key={index}
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1"
-                onClick={() => window.open(link.url, "_blank")}
-              >
-                <ExternalLink className="h-3 w-3" />
-                {link.label}
-              </Button>
+              <TooltipProvider key={index}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {isClickable ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1"
+                        onClick={() => handleEvidenceClick(link.url)}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        {link.label}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs gap-1 cursor-not-allowed opacity-70"
+                        disabled
+                      >
+                        <Lock className="h-3 w-3" />
+                        {link.label}
+                      </Button>
+                    )}
+                  </TooltipTrigger>
+                  {!isClickable && (
+                    <TooltipContent>
+                      <p>View only - click disabled for investors</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
             ))}
           </div>
         </div>
