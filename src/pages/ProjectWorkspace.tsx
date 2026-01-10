@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 // Workspace tab components
 import TaskBoard from "@/components/workspace/TaskBoard";
-import FileManager from "@/components/workspace/FileManager";
+import DocumentStages from "@/components/workspace/DocumentStages";
 import Discussions from "@/components/workspace/Discussions";
 import Meetings from "@/components/workspace/Meetings";
 import Planner from "@/components/workspace/Planner";
@@ -230,7 +230,7 @@ const ProjectWorkspace = () => {
           {/* Render Active Section */}
           <div className="p-6">
             {activeSection === "tasks" && <TaskBoard />}
-            {activeSection === "documents" && <FileManager />}
+            {activeSection === "documents" && <DocumentStages />}
             {activeSection === "discussion" && <Discussions />}
             {activeSection === "planner" && <Planner />}
             {activeSection === "meeting" && <Meetings />}
