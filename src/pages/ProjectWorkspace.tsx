@@ -94,10 +94,10 @@ const ProjectWorkspace = () => {
 
   return (
     <div className="min-h-screen flex bg-background">
-      {/* Inner Sidebar (Project-specific) */}
+      {/* Inner Sidebar (Project-specific) - positioned after outer rail */}
       <aside
         className={cn(
-          "fixed left-16 top-0 h-screen bg-sidebar flex flex-col z-40 transition-all duration-300 border-r border-sidebar-border",
+          "fixed left-16 top-0 h-screen bg-sidebar flex flex-col z-40 transition-all duration-200 border-r border-sidebar-border",
           innerSidebarOpen ? "w-56" : "w-0 overflow-hidden"
         )}
       >

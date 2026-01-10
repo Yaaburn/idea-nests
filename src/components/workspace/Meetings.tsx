@@ -1,17 +1,23 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Video, 
   Calendar, 
   Clock, 
-  Users, 
   Plus,
   Play,
-  ExternalLink,
-  MoreHorizontal
+  MoreHorizontal,
+  X,
+  ChevronDown,
+  ChevronUp,
+  MapPin,
+  Users
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Meeting {
   id: string;
@@ -91,9 +97,68 @@ const meetings: Meeting[] = [
   },
 ];
 
+const mockAttendees = [
+  { id: "1", name: "Sarah Chen", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150" },
+  { id: "2", name: "Alex Kim", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150" },
+  { id: "3", name: "Maria Lopez", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150" },
+  { id: "4", name: "James Wilson", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150" },
+];
+
 const Meetings = () => {
-  const scheduledMeetings = meetings.filter(m => m.type === "scheduled");
-  const pastMeetings = meetings.filter(m => m.type === "past");
+  const [meetingsList, setMeetingsList] = useState(meetings);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
+  const [scheduleData, setScheduleData] = useState({
+    title: "",
+    date: new Date().toISOString().split("T")[0],
+    startTime: "09:00",
+    endTime: "10:00",
+    attendees: [] as string[],
+    location: "",
+    description: "",
+  });
+
+  const scheduledMeetings = meetingsList.filter(m => m.type === "scheduled");
+  const pastMeetings = meetingsList.filter(m => m.type === "past");
+
+  const toggleAttendee = (id: string) => {
+    setScheduleData(prev => ({
+      ...prev,
+      attendees: prev.attendees.includes(id)
+        ? prev.attendees.filter(a => a !== id)
+        : [...prev.attendees, id]
+    }));
+  };
+
+  const handleScheduleMeeting = () => {
+    if (!scheduleData.title.trim()) return;
+
+    const newMeeting: Meeting = {
+      id: `meeting-${Date.now()}`,
+      title: scheduleData.title,
+      date: scheduleData.date,
+      time: scheduleData.startTime,
+      duration: "1 hr",
+      type: "scheduled",
+      participants: scheduleData.attendees.map(id => {
+        const attendee = mockAttendees.find(a => a.id === id);
+        return attendee ? { name: attendee.name, avatar: attendee.avatar } : { name: "Unknown", avatar: "" };
+      }),
+    };
+
+    setMeetingsList(prev => [...prev, newMeeting]);
+    setShowScheduleModal(false);
+    setShowDetails(false);
+    setScheduleData({
+      title: "",
+      date: new Date().toISOString().split("T")[0],
+      startTime: "09:00",
+      endTime: "10:00",
+      attendees: [],
+      location: "",
+      description: "",
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -103,7 +168,7 @@ const Meetings = () => {
           <Video className="h-4 w-4 mr-2" />
           Start Meeting
         </Button>
-        <Button variant="outline">
+        <Button variant="outline" onClick={() => setShowScheduleModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Schedule Meeting
         </Button>
@@ -214,6 +279,139 @@ const Meetings = () => {
           </div>
         </Card>
       </div>
+
+      {/* Schedule Meeting Modal with iOS-style blur */}
+      {showScheduleModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          onClick={() => {
+            setShowScheduleModal(false);
+            setShowDetails(false);
+          }}
+        >
+          {/* Backdrop with blur */}
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-xl" />
+          
+          {/* Modal Card */}
+          <div
+            className="relative bg-popover border rounded-xl shadow-2xl p-6 w-[400px] max-w-[90vw] animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header - No X button, click outside to dismiss */}
+            <h3 className="font-semibold text-xl mb-4">Schedule Meeting</h3>
+
+            {/* Title */}
+            <Input
+              placeholder="New meeting..."
+              value={scheduleData.title}
+              onChange={(e) => setScheduleData(prev => ({ ...prev, title: e.target.value }))}
+              className="mb-4"
+              autoFocus
+            />
+
+            {/* Date & Time */}
+            <div className="flex gap-2 mb-4">
+              <Input
+                type="date"
+                value={scheduleData.date}
+                onChange={(e) => setScheduleData(prev => ({ ...prev, date: e.target.value }))}
+                className="flex-1"
+              />
+              <Input
+                type="time"
+                value={scheduleData.startTime}
+                onChange={(e) => setScheduleData(prev => ({ ...prev, startTime: e.target.value }))}
+                className="w-24"
+              />
+              <span className="flex items-center text-muted-foreground">–</span>
+              <Input
+                type="time"
+                value={scheduleData.endTime}
+                onChange={(e) => setScheduleData(prev => ({ ...prev, endTime: e.target.value }))}
+                className="w-24"
+              />
+            </div>
+
+            {/* Attendees */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Attendees</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {mockAttendees.map((attendee) => (
+                  <button
+                    key={attendee.id}
+                    onClick={() => toggleAttendee(attendee.id)}
+                    className={cn(
+                      "flex items-center gap-2 px-2 py-1 rounded-full border transition-all",
+                      scheduleData.attendees.includes(attendee.id)
+                        ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={attendee.avatar} />
+                      <AvatarFallback>{attendee.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs">{attendee.name.split(" ")[0]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Hide/Show Details Toggle */}
+            <button
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
+              onClick={() => setShowDetails(!showDetails)}
+            >
+              {showDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              {showDetails ? "Hide details" : "Show details"}
+            </button>
+
+            {/* Collapsible Details */}
+            {showDetails && (
+              <div className="space-y-3 mb-4 animate-fade-in">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Add location or meeting link..."
+                    value={scheduleData.location}
+                    onChange={(e) => setScheduleData(prev => ({ ...prev, location: e.target.value }))}
+                    className="flex-1"
+                  />
+                </div>
+                <textarea
+                  placeholder="Add description..."
+                  value={scheduleData.description}
+                  onChange={(e) => setScheduleData(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm rounded-md border bg-transparent resize-none min-h-[60px]"
+                />
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowScheduleModal(false);
+                  setShowDetails(false);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="gradient-primary text-white"
+                onClick={handleScheduleMeeting}
+                disabled={!scheduleData.title.trim()}
+              >
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
