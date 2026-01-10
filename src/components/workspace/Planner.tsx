@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,8 +15,7 @@ import {
   ChevronUp,
   MapPin,
   Users,
-  Trash2,
-  Pencil
+  Trash2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -107,11 +106,17 @@ const mockAttendees = [
 ];
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const SLOT_HEIGHT = 20; // pixels per 15-minute slot
-const HOUR_HEIGHT = SLOT_HEIGHT * 4; // 80px per hour
+
+// Grid constants - SINGLE SOURCE OF TRUTH
+const SLOT_HEIGHT = 16; // pixels per 15-minute slot
+const HOUR_HEIGHT = SLOT_HEIGHT * 4; // 64px per hour
 const DAY_START_HOUR = 7;
 const DAY_END_HOUR = 21;
 const TIME_COLUMN_WIDTH = 72; // Fixed width for time column
+
+// Grid template - shared between header and body
+const WEEK_GRID_TEMPLATE = `${TIME_COLUMN_WIDTH}px repeat(7, minmax(0, 1fr))`;
+const DAY_GRID_TEMPLATE = `${TIME_COLUMN_WIDTH}px minmax(0, 1fr)`;
 
 const Planner = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("week");
@@ -131,7 +136,7 @@ const Planner = () => {
     description: "",
   });
   const [showDetails, setShowDetails] = useState(false);
-  const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0, anchor: "bottom" as "top" | "bottom" | "left" | "right" });
+  const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
   const popoverRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -222,43 +227,34 @@ const Planner = () => {
     };
   };
 
-  // Smart popover positioning
+  // Smart popover positioning - clamp to viewport
   const calculateSmartPosition = (clickX: number, clickY: number) => {
     const padding = 16;
-    const popoverWidth = 360;
-    const popoverHeight = 420;
+    const popoverWidth = 380;
+    const popoverHeight = 480;
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    let x = clickX;
-    let y = clickY;
-    let anchor: "top" | "bottom" | "left" | "right" = "bottom";
+    let x = clickX + 10; // Offset from click
+    let y = clickY + 10;
 
-    // Horizontal positioning
-    if (clickX + popoverWidth / 2 > viewportWidth - padding) {
-      x = viewportWidth - popoverWidth - padding;
-      anchor = "left";
-    } else if (clickX - popoverWidth / 2 < padding) {
+    // Horizontal clamping
+    if (x + popoverWidth > viewportWidth - padding) {
+      x = clickX - popoverWidth - 10;
+    }
+    if (x < padding) {
       x = padding;
-      anchor = "right";
-    } else {
-      x = clickX - popoverWidth / 2;
     }
 
-    // Vertical positioning
-    if (clickY + popoverHeight > viewportHeight - padding) {
-      y = Math.max(padding, clickY - popoverHeight - 10);
-      anchor = "top";
-    } else {
-      y = clickY + 10;
-      anchor = "bottom";
+    // Vertical clamping
+    if (y + popoverHeight > viewportHeight - padding) {
+      y = viewportHeight - popoverHeight - padding;
+    }
+    if (y < padding) {
+      y = padding;
     }
 
-    // Clamp to viewport
-    x = Math.max(padding, Math.min(x, viewportWidth - popoverWidth - padding));
-    y = Math.max(padding, Math.min(y, viewportHeight - popoverHeight - padding));
-
-    return { x, y, anchor };
+    return { x, y };
   };
 
   // Handle time slot click for quick event creation
@@ -432,9 +428,9 @@ const Planner = () => {
   const totalGridHeight = displayHours.length * HOUR_HEIGHT;
 
   return (
-    <div className="space-y-6" ref={containerRef}>
+    <div className="flex flex-col h-full min-h-0" ref={containerRef}>
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between flex-shrink-0 mb-4">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -484,7 +480,7 @@ const Planner = () => {
                 location: "",
                 description: "",
               });
-              setPopoverPosition({ x: window.innerWidth / 2 - 180, y: 200, anchor: "bottom" });
+              setPopoverPosition({ x: window.innerWidth / 2 - 190, y: 150 });
               setSelectedEvent(null);
               setPopoverMode("create");
             }}
@@ -495,13 +491,13 @@ const Planner = () => {
         </div>
       </div>
 
-      {/* Calendar Grid */}
-      <Card className="overflow-hidden">
+      {/* Calendar Grid - Flex grow to fill available space */}
+      <Card className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {/* Month View */}
         {viewMode === "month" && (
-          <div>
+          <div className="flex flex-col h-full">
             {/* Day Headers */}
-            <div className="grid grid-cols-7 border-b">
+            <div className="grid grid-cols-7 border-b flex-shrink-0">
               {DAYS.map((day) => (
                 <div
                   key={day}
@@ -512,7 +508,7 @@ const Planner = () => {
               ))}
             </div>
             {/* Days Grid */}
-            <div className="grid grid-cols-7">
+            <div className="grid grid-cols-7 flex-1 min-h-0 overflow-auto">
               {monthDays.map((date, i) => {
                 const isCurrentMonth = date.getMonth() === currentDate.getMonth();
                 const isToday = date.toDateString() === today.toDateString();
@@ -560,29 +556,31 @@ const Planner = () => {
           </div>
         )}
 
-        {/* Week View - CSS Grid based for perfect alignment */}
+        {/* Week View - CSS Grid with SHARED template for perfect alignment */}
         {viewMode === "week" && (
-          <div>
-            {/* Header Row - uses same grid structure */}
+          <div className="flex flex-col h-full">
+            {/* Header Row - EXACT SAME grid template as body */}
             <div 
-              className="grid border-b"
-              style={{ gridTemplateColumns: `${TIME_COLUMN_WIDTH}px repeat(7, 1fr)` }}
+              className="grid border-b flex-shrink-0"
+              style={{ gridTemplateColumns: WEEK_GRID_TEMPLATE }}
             >
-              <div className="p-3 border-r" /> {/* Empty cell for time column */}
+              {/* Time column header - empty */}
+              <div className="p-2 border-r bg-muted/30" />
+              {/* Day headers */}
               {weekDays.map((date, i) => {
                 const isToday = date.toDateString() === today.toDateString();
                 return (
                   <div
                     key={i}
                     className={cn(
-                      "p-3 text-center border-r last:border-r-0",
+                      "p-2 text-center border-r last:border-r-0",
                       isToday && "bg-primary/10"
                     )}
                   >
-                    <div className="text-sm text-muted-foreground">{DAYS[i]}</div>
+                    <div className="text-xs text-muted-foreground uppercase">{DAYS[i]}</div>
                     <div
                       className={cn(
-                        "text-lg font-semibold mt-1",
+                        "text-lg font-semibold",
                         isToday && "text-primary"
                       )}
                     >
@@ -593,20 +591,20 @@ const Planner = () => {
               })}
             </div>
 
-            {/* Time Grid Body */}
+            {/* Time Grid Body - Scrollable, same grid template */}
             <div 
-              className="max-h-[600px] overflow-y-auto"
+              className="flex-1 min-h-0 overflow-auto"
               onMouseUp={handleMouseUp}
             >
               <div 
                 className="grid relative"
                 style={{ 
-                  gridTemplateColumns: `${TIME_COLUMN_WIDTH}px repeat(7, 1fr)`,
+                  gridTemplateColumns: WEEK_GRID_TEMPLATE,
                   height: `${totalGridHeight}px`
                 }}
               >
                 {/* Time Labels Column */}
-                <div className="border-r relative">
+                <div className="border-r bg-muted/20 relative">
                   {displayHours.map((hour, idx) => (
                     <div 
                       key={hour}
@@ -710,96 +708,137 @@ const Planner = () => {
           </div>
         )}
 
-        {/* Day View - CSS Grid based */}
+        {/* Day View - CSS Grid with shared template logic */}
         {viewMode === "day" && (
-          <div className="max-h-[600px] overflow-y-auto">
+          <div className="flex flex-col h-full">
+            {/* Day Header */}
             <div 
-              className="grid relative"
-              style={{ 
-                gridTemplateColumns: `${TIME_COLUMN_WIDTH}px 1fr`,
-                height: `${totalGridHeight}px`
-              }}
+              className="grid border-b flex-shrink-0"
+              style={{ gridTemplateColumns: DAY_GRID_TEMPLATE }}
             >
-              {/* Time Labels */}
-              <div className="border-r relative">
-                {displayHours.map((hour, idx) => (
-                  <div 
-                    key={hour}
-                    className="absolute text-xs text-muted-foreground text-right pr-2 w-full"
-                    style={{ 
-                      top: `${idx * HOUR_HEIGHT}px`,
-                      height: `${HOUR_HEIGHT}px`,
-                      lineHeight: '1'
-                    }}
-                  >
-                    <span className="relative -top-2">
-                      {hour.toString().padStart(2, "0")}:00
-                    </span>
-                  </div>
-                ))}
+              <div className="p-2 border-r bg-muted/30" />
+              <div className={cn(
+                "p-3 text-center",
+                currentDate.toDateString() === today.toDateString() && "bg-primary/10"
+              )}>
+                <div className="text-xs text-muted-foreground uppercase">
+                  {DAYS[currentDate.getDay()]}
+                </div>
+                <div className={cn(
+                  "text-2xl font-bold",
+                  currentDate.toDateString() === today.toDateString() && "text-primary"
+                )}>
+                  {currentDate.getDate()}
+                </div>
               </div>
+            </div>
 
-              {/* Day Column */}
-              <div className="relative">
-                {/* Hour grid lines */}
-                {displayHours.map((hour, idx) => (
-                  <div
-                    key={hour}
-                    className="absolute w-full border-t border-border/50"
-                    style={{ top: `${idx * HOUR_HEIGHT}px` }}
-                  />
-                ))}
-
-                {/* Half-hour grid lines */}
-                {displayHours.map((hour, idx) => (
-                  <div
-                    key={`half-${hour}`}
-                    className="absolute w-full border-t border-border/20"
-                    style={{ top: `${idx * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }}
-                  />
-                ))}
-
-                {/* Clickable slots */}
-                {displayHours.map((hour, idx) => (
-                  <div
-                    key={`slot-${hour}`}
-                    className="absolute w-full cursor-pointer hover:bg-muted/30 transition-colors"
-                    style={{ 
-                      top: `${idx * HOUR_HEIGHT}px`,
-                      height: `${HOUR_HEIGHT}px`
-                    }}
-                    onClick={(e) => openCreatePopover(currentDate, hour, 0, e)}
-                  />
-                ))}
-
-                {/* Events */}
-                {getEventsForDate(currentDate).map((event) => {
-                  const style = getEventStyle(event);
-                  return (
-                    <div
-                      key={event.id}
-                      className={cn(
-                        "absolute left-2 right-2 px-3 py-2 rounded text-white overflow-hidden cursor-pointer hover:opacity-90 hover:shadow-md transition-all z-20",
-                        event.color
-                      )}
-                      style={style}
-                      onClick={(e) => openEditPopover(event, e)}
+            {/* Time Grid Body */}
+            <div 
+              className="flex-1 min-h-0 overflow-auto"
+              onMouseUp={handleMouseUp}
+            >
+              <div 
+                className="grid relative"
+                style={{ 
+                  gridTemplateColumns: DAY_GRID_TEMPLATE,
+                  height: `${totalGridHeight}px`
+                }}
+              >
+                {/* Time Labels */}
+                <div className="border-r bg-muted/20 relative">
+                  {displayHours.map((hour, idx) => (
+                    <div 
+                      key={hour}
+                      className="absolute text-xs text-muted-foreground text-right pr-2 w-full"
+                      style={{ 
+                        top: `${idx * HOUR_HEIGHT}px`,
+                        height: `${HOUR_HEIGHT}px`,
+                        lineHeight: '1'
+                      }}
                     >
-                      <div className="font-medium">{event.title}</div>
-                      <div className="text-sm opacity-80 flex items-center gap-1 mt-1">
-                        <Clock className="h-3 w-3" />
-                        {event.startTime} - {event.endTime}
-                      </div>
+                      <span className="relative -top-2">
+                        {hour.toString().padStart(2, "0")}:00
+                      </span>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+
+                {/* Day Column */}
+                <div className="relative">
+                  {/* Hour grid lines */}
+                  {displayHours.map((hour, idx) => (
+                    <div
+                      key={hour}
+                      className="absolute w-full border-t border-border/50"
+                      style={{ top: `${idx * HOUR_HEIGHT}px` }}
+                    />
+                  ))}
+
+                  {/* Half-hour grid lines */}
+                  {displayHours.map((hour, idx) => (
+                    <div
+                      key={`half-${hour}`}
+                      className="absolute w-full border-t border-border/20"
+                      style={{ top: `${idx * HOUR_HEIGHT + HOUR_HEIGHT / 2}px` }}
+                    />
+                  ))}
+
+                  {/* Clickable slots */}
+                  {displayHours.map((hour, idx) => (
+                    <div
+                      key={`slot-${hour}`}
+                      className="absolute w-full cursor-pointer hover:bg-muted/30 transition-colors"
+                      style={{ 
+                        top: `${idx * HOUR_HEIGHT}px`,
+                        height: `${HOUR_HEIGHT}px`
+                      }}
+                      onClick={(e) => openCreatePopover(currentDate, hour, 0, e)}
+                      onMouseDown={(e) => handleMouseDown(currentDate, hour, 0, e)}
+                      onMouseMove={() => handleMouseMove(hour, 0)}
+                    />
+                  ))}
+
+                  {/* Drag selection indicator */}
+                  {isDragging && dragStart && dragEnd && (
+                    <div
+                      className="absolute left-2 right-2 bg-primary/30 rounded border-2 border-primary border-dashed pointer-events-none z-10"
+                      style={{
+                        top: `${((Math.min(dragStart.hour, dragEnd.hour) - DAY_START_HOUR) * 60 + Math.min(dragStart.minute, dragEnd.minute)) / 15 * SLOT_HEIGHT}px`,
+                        height: `${Math.max(Math.abs((dragEnd.hour * 60 + dragEnd.minute) - (dragStart.hour * 60 + dragStart.minute)) / 15 * SLOT_HEIGHT, SLOT_HEIGHT)}px`,
+                      }}
+                    />
+                  )}
+
+                  {/* Events */}
+                  {getEventsForDate(currentDate).map((event) => {
+                    const style = getEventStyle(event);
+                    return (
+                      <div
+                        key={event.id}
+                        className={cn(
+                          "absolute left-2 right-2 px-3 py-2 rounded text-white overflow-hidden cursor-pointer hover:opacity-90 hover:shadow-md transition-all z-20",
+                          event.color
+                        )}
+                        style={style}
+                        onClick={(e) => openEditPopover(event, e)}
+                      >
+                        <div className="font-medium">{event.title}</div>
+                        <div className="text-sm opacity-80 flex items-center gap-1 mt-1">
+                          <Clock className="h-3 w-3" />
+                          {event.startTime} - {event.endTime}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
         )}
       </Card>
 
-      {/* Quick Event / Edit Popover (NO backdrop blur for Planner) */}
+      {/* Quick Event / Edit Popover - STACK LAYOUT (NO backdrop blur for Planner) */}
       {popoverMode && (
         <div 
           className="fixed inset-0 z-50"
@@ -807,7 +846,7 @@ const Planner = () => {
         >
           <div
             ref={popoverRef}
-            className="absolute bg-popover border rounded-xl shadow-xl p-4 w-[360px] animate-fade-in"
+            className="absolute bg-popover border rounded-xl shadow-2xl w-[380px] max-w-[calc(100vw-32px)] animate-fade-in overflow-hidden"
             style={{
               left: popoverPosition.x,
               top: popoverPosition.y,
@@ -815,7 +854,7 @@ const Planner = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between p-4 border-b bg-muted/30">
               <h3 className="font-semibold text-lg">
                 {popoverMode === "edit" ? "Edit Event" : "Quick Event"}
               </h3>
@@ -829,98 +868,119 @@ const Planner = () => {
               </Button>
             </div>
 
-            {/* Title */}
-            <Input
-              placeholder="Event title..."
-              value={quickEventData.title}
-              onChange={(e) => setQuickEventData(prev => ({ ...prev, title: e.target.value }))}
-              className="mb-3"
-              autoFocus
-            />
-
-            {/* Date & Time */}
-            <div className="flex gap-2 mb-3">
-              <Input
-                type="date"
-                value={quickEventData.date}
-                onChange={(e) => setQuickEventData(prev => ({ ...prev, date: e.target.value }))}
-                className="flex-1"
-              />
-              <Input
-                type="time"
-                value={quickEventData.startTime}
-                onChange={(e) => setQuickEventData(prev => ({ ...prev, startTime: e.target.value }))}
-                className="w-24"
-              />
-              <span className="flex items-center text-muted-foreground">–</span>
-              <Input
-                type="time"
-                value={quickEventData.endTime}
-                onChange={(e) => setQuickEventData(prev => ({ ...prev, endTime: e.target.value }))}
-                className="w-24"
-              />
-            </div>
-
-            {/* Attendees */}
-            <div className="mb-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Attendees</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {mockAttendees.map((attendee) => (
-                  <button
-                    key={attendee.id}
-                    onClick={() => toggleAttendee(attendee.id)}
-                    className={cn(
-                      "flex items-center gap-2 px-2 py-1 rounded-full border transition-all",
-                      quickEventData.attendees.includes(attendee.id)
-                        ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    <Avatar className="h-5 w-5">
-                      <AvatarImage src={attendee.avatar} />
-                      <AvatarFallback>{attendee.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs">{attendee.name.split(" ")[0]}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Hide/Show Details Toggle */}
-            <button
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-3"
-              onClick={() => setShowDetails(!showDetails)}
-            >
-              {showDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              {showDetails ? "Hide details" : "Show details"}
-            </button>
-
-            {/* Collapsible Details */}
-            {showDetails && (
-              <div className="space-y-3 mb-3 animate-fade-in">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Add location or meeting link..."
-                    value={quickEventData.location}
-                    onChange={(e) => setQuickEventData(prev => ({ ...prev, location: e.target.value }))}
-                    className="flex-1"
-                  />
-                </div>
-                <textarea
-                  placeholder="Add description..."
-                  value={quickEventData.description}
-                  onChange={(e) => setQuickEventData(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm rounded-md border bg-transparent resize-none min-h-[60px]"
+            <div className="p-4 space-y-4">
+              {/* Title */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Title</label>
+                <Input
+                  placeholder="Event title..."
+                  value={quickEventData.title}
+                  onChange={(e) => setQuickEventData(prev => ({ ...prev, title: e.target.value }))}
+                  autoFocus
+                  className="w-full"
                 />
               </div>
-            )}
 
-            {/* Actions */}
-            <div className="flex justify-between">
+              {/* Date - Full width, own row */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Date</label>
+                <Input
+                  type="date"
+                  value={quickEventData.date}
+                  onChange={(e) => setQuickEventData(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Time Range - Separate row with 2 columns */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Start</label>
+                  <Input
+                    type="time"
+                    value={quickEventData.startTime}
+                    onChange={(e) => setQuickEventData(prev => ({ ...prev, startTime: e.target.value }))}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">End</label>
+                  <Input
+                    type="time"
+                    value={quickEventData.endTime}
+                    onChange={(e) => setQuickEventData(prev => ({ ...prev, endTime: e.target.value }))}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Attendees */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Attendees</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {mockAttendees.map((attendee) => (
+                    <button
+                      key={attendee.id}
+                      onClick={() => toggleAttendee(attendee.id)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs transition-all",
+                        quickEventData.attendees.includes(attendee.id)
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                          : "border-border hover:border-primary/50"
+                      )}
+                    >
+                      <Avatar className="h-4 w-4">
+                        <AvatarImage src={attendee.avatar} />
+                        <AvatarFallback className="text-[8px]">{attendee.name[0]}</AvatarFallback>
+                      </Avatar>
+                      <span className="truncate max-w-[60px]">{attendee.name.split(" ")[0]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hide/Show Details Toggle */}
+              <button
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowDetails(!showDetails)}
+              >
+                {showDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {showDetails ? "Hide details" : "Show details"}
+              </button>
+
+              {/* Collapsible Details */}
+              {showDetails && (
+                <div className="space-y-3 animate-fade-in">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5" />
+                      Location
+                    </label>
+                    <Input
+                      placeholder="Add location or meeting link..."
+                      value={quickEventData.location}
+                      onChange={(e) => setQuickEventData(prev => ({ ...prev, location: e.target.value }))}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</label>
+                    <textarea
+                      placeholder="Add description..."
+                      value={quickEventData.description}
+                      onChange={(e) => setQuickEventData(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm rounded-md border bg-transparent resize-none min-h-[60px]"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions - Sticky footer */}
+            <div className="flex justify-between p-4 border-t bg-muted/20">
               {popoverMode === "edit" && (
                 <Button
                   variant="ghost"
@@ -949,7 +1009,7 @@ const Planner = () => {
         </div>
       )}
 
-      {/* Empty State */}
+      {/* Empty State for Day view */}
       {viewMode === "day" && getEventsForDate(currentDate).length === 0 && !popoverMode && (
         <div className="text-center py-8 text-muted-foreground">
           <CalendarIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -968,7 +1028,7 @@ const Planner = () => {
                 location: "",
                 description: "",
               });
-              setPopoverPosition({ x: window.innerWidth / 2 - 180, y: 200, anchor: "bottom" });
+              setPopoverPosition({ x: window.innerWidth / 2 - 190, y: 150 });
               setSelectedEvent(null);
               setPopoverMode("create");
             }}

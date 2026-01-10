@@ -92,9 +92,9 @@ const ProjectWorkspaceContent = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
+    <div className="flex h-screen">
       {/* Inner Sidebar (Project-specific) */}
-      <aside className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col flex-shrink-0 animate-fade-in">
+      <aside className="w-56 bg-sidebar border-r border-sidebar-border flex flex-col flex-shrink-0 animate-fade-in h-full">
         {/* Project Header */}
         <div className="p-4 border-b border-sidebar-border">
           <h2 className="font-bold text-sidebar-foreground truncate">{project.name}</h2>
@@ -113,7 +113,7 @@ const ProjectWorkspaceContent = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+        <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto min-h-0">
           {/* Workspace - Main Item */}
           <div
             className={cn(
@@ -202,10 +202,9 @@ const ProjectWorkspaceContent = () => {
           </Button>
         </header>
 
-        {/* Content Slot */}
-        <main className="flex-1 overflow-auto relative">
-          {/* Render Active Section */}
-          <div className="p-6">
+        {/* Content Slot - Full height with proper overflow */}
+        <main className="flex-1 min-h-0 overflow-auto">
+          <div className="h-full p-6">
             {activeSection === "tasks" && <TaskBoard />}
             {activeSection === "documents" && <DocumentStages />}
             {activeSection === "discussion" && <Discussions />}
