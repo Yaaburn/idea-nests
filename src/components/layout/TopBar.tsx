@@ -1,5 +1,5 @@
-import { Link, useNavigate } from "react-router-dom";
-import { Search, Bell, MessageSquare, HelpCircle, Plus } from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { Search, HelpCircle, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -11,10 +11,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
+import NotificationsDropdown from "@/components/home/NotificationsDropdown";
+import MessagesDropdown from "@/components/home/MessagesDropdown";
 
-const TopBar = () => {
+interface TopBarProps {
+  onOpenChat?: (conversation: { id: string; user: { name: string; avatar: string; online?: boolean } }) => void;
+}
+
+const TopBar = ({ onOpenChat }: TopBarProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if we're in workspace - hide TopBar there
+  const isInWorkspace = location.pathname.startsWith("/workspace/");
+  
+  if (isInWorkspace) {
+    return null;
+  }
+
+  const handleOpenChatFromDropdown = (conversation: { id: string; user: { name: string; avatar: string; online?: boolean } }) => {
+    onOpenChat?.(conversation);
+  };
 
   return (
     <header className="h-16 bg-background/95 backdrop-blur-sm border-b border-border sticky top-0 z-40">
@@ -24,7 +41,7 @@ const TopBar = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
-              placeholder="Search projects, people, tags..."
+              placeholder="Tìm kiếm dự án, người, tags..."
               className="pl-10 bg-muted/50 border-0 focus-visible:ring-primary/50"
             />
           </div>
@@ -37,30 +54,18 @@ const TopBar = () => {
             className="gradient-primary text-primary-foreground shadow-md hover:shadow-lg transition-shadow"
           >
             <Plus className="h-4 w-4 mr-2" />
-            New Project
+            Tạo dự án
           </Button>
 
           <Button variant="ghost" size="icon" className="relative">
             <HelpCircle className="h-5 w-5" />
           </Button>
 
-          <Button variant="ghost" size="icon" className="relative" asChild>
-            <Link to="/notifications">
-              <MessageSquare className="h-5 w-5" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs gradient-accent border-0">
-                3
-              </Badge>
-            </Link>
-          </Button>
+          {/* Messages Dropdown */}
+          <MessagesDropdown onOpenChat={handleOpenChatFromDropdown} />
 
-          <Button variant="ghost" size="icon" className="relative" asChild>
-            <Link to="/notifications">
-              <Bell className="h-5 w-5" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs gradient-primary border-0">
-                5
-              </Badge>
-            </Link>
-          </Button>
+          {/* Notifications Dropdown */}
+          <NotificationsDropdown />
 
           {/* User Menu */}
           <DropdownMenu>
@@ -83,17 +88,17 @@ const TopBar = () => {
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate("/profile/1")}>
-                Profile
+                Hồ sơ
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                Dashboard
+                Bảng điều khiển
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/settings")}>
-                Settings
+                Cài đặt
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem>
-                Log out
+                Đăng xuất
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

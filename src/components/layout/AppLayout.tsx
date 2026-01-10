@@ -7,9 +7,10 @@ import { cn } from "@/lib/utils";
 interface AppLayoutProps {
   children: ReactNode;
   showSidebar?: boolean;
+  onOpenChat?: (conversation: { id: string; user: { name: string; avatar: string; online?: boolean } }) => void;
 }
 
-const AppLayout = ({ children, showSidebar = true }: AppLayoutProps) => {
+const AppLayout = ({ children, showSidebar = true, onOpenChat }: AppLayoutProps) => {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const location = useLocation();
   
@@ -34,7 +35,7 @@ const AppLayout = ({ children, showSidebar = true }: AppLayoutProps) => {
         )}
       >
         {/* Only show TopBar when NOT in workspace */}
-        {!isWorkspace && <TopBar />}
+        {!isWorkspace && <TopBar onOpenChat={onOpenChat} />}
         <main className={cn(
           "flex-1 min-h-0 overflow-auto",
           !isWorkspace && "pt-0"
