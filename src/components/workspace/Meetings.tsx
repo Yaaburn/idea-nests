@@ -283,116 +283,139 @@ const Meetings = () => {
         </Card>
       </div>
 
-      {/* Schedule Meeting Modal - iOS-style blur fullscreen */}
+      {/* Schedule Meeting Modal - iOS-style blur fullscreen, NO X button */}
       {showScheduleModal && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center"
           onClick={closeModal}
           onKeyDown={(e) => e.key === "Escape" && closeModal()}
         >
-          {/* Backdrop with iOS-style blur - covers entire viewport */}
-          <div className="fixed inset-0 bg-background/40 backdrop-blur-2xl" />
+          {/* Backdrop with iOS-style blur - FULL viewport coverage */}
+          <div className="fixed inset-0 bg-background/50 backdrop-blur-2xl" />
           
-          {/* Modal Card - centered, no X button */}
+          {/* Modal Card - centered, NO X button per spec */}
           <div
-            className="relative bg-popover border rounded-xl shadow-2xl p-6 w-[400px] max-w-[90vw] animate-fade-in z-[101]"
+            className="relative bg-popover border rounded-xl shadow-2xl w-[420px] max-w-[calc(100vw-32px)] animate-fade-in z-[101] overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header - NO X button per spec */}
-            <h3 className="font-semibold text-xl mb-4">Schedule Meeting</h3>
-
-            {/* Title */}
-            <Input
-              placeholder="New meeting..."
-              value={scheduleData.title}
-              onChange={(e) => setScheduleData(prev => ({ ...prev, title: e.target.value }))}
-              className="mb-4"
-              autoFocus
-            />
-
-            {/* Date & Time */}
-            <div className="flex gap-2 mb-4">
-              <Input
-                type="date"
-                value={scheduleData.date}
-                onChange={(e) => setScheduleData(prev => ({ ...prev, date: e.target.value }))}
-                className="flex-1"
-              />
-              <Input
-                type="time"
-                value={scheduleData.startTime}
-                onChange={(e) => setScheduleData(prev => ({ ...prev, startTime: e.target.value }))}
-                className="w-24"
-              />
-              <span className="flex items-center text-muted-foreground">–</span>
-              <Input
-                type="time"
-                value={scheduleData.endTime}
-                onChange={(e) => setScheduleData(prev => ({ ...prev, endTime: e.target.value }))}
-                className="w-24"
-              />
+            {/* Header */}
+            <div className="p-5 border-b bg-muted/30">
+              <h3 className="font-semibold text-xl">Schedule Meeting</h3>
             </div>
 
-            {/* Attendees */}
-            <div className="mb-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Attendees</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {mockAttendees.map((attendee) => (
-                  <button
-                    key={attendee.id}
-                    onClick={() => toggleAttendee(attendee.id)}
-                    className={cn(
-                      "flex items-center gap-2 px-2 py-1 rounded-full border transition-all",
-                      scheduleData.attendees.includes(attendee.id)
-                        ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-                        : "border-border hover:border-primary/50"
-                    )}
-                  >
-                    <Avatar className="h-5 w-5">
-                      <AvatarImage src={attendee.avatar} />
-                      <AvatarFallback>{attendee.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs">{attendee.name.split(" ")[0]}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Hide/Show Details Toggle */}
-            <button
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4"
-              onClick={() => setShowDetails(!showDetails)}
-            >
-              {showDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              {showDetails ? "Hide details" : "Show details"}
-            </button>
-
-            {/* Collapsible Details */}
-            {showDetails && (
-              <div className="space-y-3 mb-4 animate-fade-in">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Add location or meeting link..."
-                    value={scheduleData.location}
-                    onChange={(e) => setScheduleData(prev => ({ ...prev, location: e.target.value }))}
-                    className="flex-1"
-                  />
-                </div>
-                <textarea
-                  placeholder="Add description..."
-                  value={scheduleData.description}
-                  onChange={(e) => setScheduleData(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm rounded-md border bg-transparent resize-none min-h-[60px]"
+            <div className="p-5 space-y-4">
+              {/* Title - Full width */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Meeting Title</label>
+                <Input
+                  placeholder="New meeting..."
+                  value={scheduleData.title}
+                  onChange={(e) => setScheduleData(prev => ({ ...prev, title: e.target.value }))}
+                  autoFocus
+                  className="w-full"
                 />
               </div>
-            )}
 
-            {/* Actions */}
-            <div className="flex justify-end gap-2">
+              {/* Date - Full width, own row */}
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Date</label>
+                <Input
+                  type="date"
+                  value={scheduleData.date}
+                  onChange={(e) => setScheduleData(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Time Range - Separate row with 2 columns */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Start Time</label>
+                  <Input
+                    type="time"
+                    value={scheduleData.startTime}
+                    onChange={(e) => setScheduleData(prev => ({ ...prev, startTime: e.target.value }))}
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">End Time</label>
+                  <Input
+                    type="time"
+                    value={scheduleData.endTime}
+                    onChange={(e) => setScheduleData(prev => ({ ...prev, endTime: e.target.value }))}
+                    className="w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Attendees */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-medium text-muted-foreground">Attendees</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {mockAttendees.map((attendee) => (
+                    <button
+                      key={attendee.id}
+                      onClick={() => toggleAttendee(attendee.id)}
+                      className={cn(
+                        "flex items-center gap-1.5 px-2 py-1 rounded-full border text-xs transition-all",
+                        scheduleData.attendees.includes(attendee.id)
+                          ? "border-primary bg-primary/10 ring-1 ring-primary/30"
+                          : "border-border hover:border-primary/50"
+                      )}
+                    >
+                      <Avatar className="h-4 w-4">
+                        <AvatarImage src={attendee.avatar} />
+                        <AvatarFallback className="text-[8px]">{attendee.name[0]}</AvatarFallback>
+                      </Avatar>
+                      <span className="truncate max-w-[70px]">{attendee.name.split(" ")[0]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hide/Show Details Toggle */}
+              <button
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowDetails(!showDetails)}
+              >
+                {showDetails ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                {showDetails ? "Hide details" : "Show details"}
+              </button>
+
+              {/* Collapsible Details */}
+              {showDetails && (
+                <div className="space-y-3 animate-fade-in">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                      <MapPin className="h-3.5 w-3.5" />
+                      Location / Meeting Link
+                    </label>
+                    <Input
+                      placeholder="Add location or meeting link..."
+                      value={scheduleData.location}
+                      onChange={(e) => setScheduleData(prev => ({ ...prev, location: e.target.value }))}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Description</label>
+                    <textarea
+                      placeholder="Add description..."
+                      value={scheduleData.description}
+                      onChange={(e) => setScheduleData(prev => ({ ...prev, description: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm rounded-md border bg-transparent resize-none min-h-[70px]"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Actions - Sticky footer */}
+            <div className="flex justify-end gap-2 p-5 border-t bg-muted/20">
               <Button variant="ghost" onClick={closeModal}>
                 Cancel
               </Button>

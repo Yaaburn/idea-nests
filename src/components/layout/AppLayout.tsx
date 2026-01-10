@@ -1,4 +1,5 @@
 import { ReactNode, useState, useCallback } from "react";
+import { useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import { cn } from "@/lib/utils";
@@ -10,6 +11,10 @@ interface AppLayoutProps {
 
 const AppLayout = ({ children, showSidebar = true }: AppLayoutProps) => {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const location = useLocation();
+  
+  // Hide TopBar in workspace routes
+  const isWorkspace = location.pathname.startsWith("/workspace/");
 
   const handleExpandChange = useCallback((expanded: boolean) => {
     setSidebarExpanded(expanded);
@@ -20,16 +25,20 @@ const AppLayout = ({ children, showSidebar = true }: AppLayoutProps) => {
   }
 
   return (
-    <div className="min-h-screen flex w-full">
+    <div className="h-screen flex w-full overflow-hidden">
       <Sidebar onExpandChange={handleExpandChange} />
       <div 
         className={cn(
-          "flex-1 transition-all duration-200 ease-in-out",
+          "flex-1 flex flex-col min-w-0 transition-all duration-200 ease-in-out overflow-hidden",
           sidebarExpanded ? "ml-60" : "ml-16"
         )}
       >
-        <TopBar />
-        <main className="min-h-[calc(100vh-4rem)]">
+        {/* Only show TopBar when NOT in workspace */}
+        {!isWorkspace && <TopBar />}
+        <main className={cn(
+          "flex-1 min-h-0 overflow-auto",
+          !isWorkspace && "pt-0"
+        )}>
           {children}
         </main>
       </div>
