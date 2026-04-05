@@ -232,8 +232,10 @@ const Profile = () => {
                   </div>
                 </Card>
 
-                {/* Regional Rank Card */}
-                <RegionalRankCard isOwner={true} />
+                {/* Regional Rank Card — only show on own profile */}
+                {(!id || id === 'me' || id === user.name) && (
+                  <RegionalRankCard isOwner={true} />
+                )}
               </div>
             </aside>
 

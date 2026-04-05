@@ -1,373 +1,267 @@
 import { useState } from "react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
-  Github, 
-  FileText, 
-  MessageSquare, 
-  Calendar,
-  Figma,
-  Database,
-  Cloud,
-  CheckCircle2,
-  Loader2,
-  Settings,
   Plus,
+  X,
+  ExternalLink,
+  Search,
+  Link as LinkIcon,
+  Pencil,
+  Trash2,
+  Check,
   AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
 
-interface Integration {
+const PLATFORMS = [
+  { id: "google-sheets", name: "Google Sheets", icon: "📊", description: "Spreadsheets & data tracking", category: "Productivity" },
+  { id: "trello", name: "Trello", icon: "📋", description: "Kanban boards & task management", category: "Project Management" },
+  { id: "asana", name: "Asana", icon: "✅", description: "Team task & project tracking", category: "Project Management" },
+  { id: "jira", name: "Jira", icon: "🔧", description: "Issue tracking & agile boards", category: "Project Management" },
+  { id: "github", name: "GitHub", icon: "🐙", description: "Code repos & version control", category: "Development" },
+  { id: "gitlab", name: "GitLab", icon: "🦊", description: "DevOps & CI/CD pipelines", category: "Development" },
+  { id: "figma", name: "Figma", icon: "🎨", description: "UI/UX design & prototyping", category: "Design" },
+  { id: "notion", name: "Notion", icon: "📝", description: "Docs, wikis & databases", category: "Productivity" },
+  { id: "slack", name: "Slack", icon: "💬", description: "Team messaging & channels", category: "Communication" },
+  { id: "google-drive", name: "Google Drive", icon: "📁", description: "Cloud file storage & sharing", category: "Storage" },
+  { id: "miro", name: "Miro", icon: "🖼️", description: "Collaborative whiteboarding", category: "Design" },
+  { id: "linear", name: "Linear", icon: "⚡", description: "Modern issue tracking", category: "Project Management" },
+];
+
+interface ConnectedTool {
   id: string;
-  name: string;
-  icon: any;
-  description: string;
-  connected: boolean;
-  syncing: boolean;
-  lastSync?: string;
-  dataPoints?: number;
-  category: string;
+  platform: string;
+  url: string;
+  addedAt: string;
 }
 
 const IntegrationHub = () => {
-  const [integrations, setIntegrations] = useState<Integration[]>([
-    {
-      id: "github",
-      name: "GitHub",
-      icon: Github,
-      description: "Sync commits, issues, and releases to prove technical progress",
-      connected: true,
-      syncing: false,
-      lastSync: "2 hours ago",
-      dataPoints: 247,
-      category: "Development"
-    },
-    {
-      id: "notion",
-      name: "Notion",
-      icon: FileText,
-      description: "Track tasks, milestones, and project documentation",
-      connected: true,
-      syncing: false,
-      lastSync: "1 day ago",
-      dataPoints: 142,
-      category: "Productivity"
-    },
-    {
-      id: "slack",
-      name: "Slack",
-      icon: MessageSquare,
-      description: "Capture team collaboration and communication frequency",
-      connected: false,
-      syncing: false,
-      category: "Communication"
-    },
-    {
-      id: "figma",
-      name: "Figma",
-      icon: Figma,
-      description: "Sync design iterations and prototype updates",
-      connected: true,
-      syncing: false,
-      lastSync: "3 days ago",
-      dataPoints: 89,
-      category: "Design"
-    },
-    {
-      id: "google-drive",
-      name: "Google Drive",
-      icon: Cloud,
-      description: "Monitor document updates and file activity",
-      connected: false,
-      syncing: false,
-      category: "Storage"
-    },
-    {
-      id: "google-meet",
-      name: "Google Meet",
-      icon: Calendar,
-      description: "Track meeting frequency and team engagement",
-      connected: false,
-      syncing: false,
-      category: "Communication"
-    },
-    {
-      id: "trello",
-      name: "Trello",
-      icon: Database,
-      description: "Sync board activity and task completion",
-      connected: false,
-      syncing: false,
-      category: "Productivity"
-    }
+  const [connectedTools, setConnectedTools] = useState<ConnectedTool[]>([
+    { id: "1", platform: "GitHub", url: "https://github.com/team/solarsense", addedAt: "2 weeks ago" },
+    { id: "2", platform: "Notion", url: "https://notion.so/workspace/solarsense", addedAt: "1 month ago" },
+    { id: "3", platform: "Figma", url: "https://figma.com/file/solarsense-design", addedAt: "3 weeks ago" },
   ]);
 
-  const [autoSync, setAutoSync] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [addingPlatformId, setAddingPlatformId] = useState<string | null>(null);
+  const [newUrl, setNewUrl] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editUrl, setEditUrl] = useState("");
 
-  const handleConnect = (id: string) => {
-    setIntegrations(prev => prev.map(int => 
-      int.id === id 
-        ? { ...int, syncing: true }
-        : int
-    ));
+  const filteredPlatforms = PLATFORMS.filter(p => 
+    !connectedTools.some(t => t.platform === p.name) &&
+    (p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+     p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
-    setTimeout(() => {
-      setIntegrations(prev => prev.map(int => 
-        int.id === id 
-          ? { ...int, connected: true, syncing: false, lastSync: "Just now", dataPoints: 0 }
-          : int
-      ));
-      toast.success(`Connected to ${integrations.find(i => i.id === id)?.name} successfully!`);
-    }, 2000);
+  const handleAdd = (platformId: string) => {
+    if (!newUrl.trim()) return;
+    const platform = PLATFORMS.find(p => p.id === platformId);
+    if (!platform) return;
+    setConnectedTools(prev => [...prev, {
+      id: Date.now().toString(),
+      platform: platform.name,
+      url: newUrl.trim(),
+      addedAt: "Just now",
+    }]);
+    setNewUrl("");
+    setAddingPlatformId(null);
+    toast.success(`${platform.name} linked successfully!`);
   };
 
-  const handleDisconnect = (id: string) => {
-    setIntegrations(prev => prev.map(int => 
-      int.id === id 
-        ? { ...int, connected: false, lastSync: undefined, dataPoints: undefined }
-        : int
-    ));
-    toast.info(`Disconnected from ${integrations.find(i => i.id === id)?.name}`);
+  const handleRemove = (id: string) => {
+    const tool = connectedTools.find(t => t.id === id);
+    setConnectedTools(prev => prev.filter(t => t.id !== id));
+    toast.info(`${tool?.platform} removed`);
   };
 
-  const handleSync = (id: string) => {
-    setIntegrations(prev => prev.map(int => 
-      int.id === id 
-        ? { ...int, syncing: true }
-        : int
-    ));
-
-    setTimeout(() => {
-      setIntegrations(prev => prev.map(int => 
-        int.id === id 
-          ? { 
-              ...int, 
-              syncing: false, 
-              lastSync: "Just now",
-              dataPoints: (int.dataPoints || 0) + Math.floor(Math.random() * 20) + 5
-            }
-          : int
-      ));
-      toast.success("Sync completed successfully!");
-    }, 3000);
+  const handleEditSave = (id: string) => {
+    if (!editUrl.trim()) return;
+    setConnectedTools(prev => prev.map(t => t.id === id ? { ...t, url: editUrl.trim() } : t));
+    setEditingId(null);
+    setEditUrl("");
+    toast.success("Link updated");
   };
 
-  const connectedCount = integrations.filter(i => i.connected).length;
-  const totalDataPoints = integrations.reduce((sum, int) => sum + (int.dataPoints || 0), 0);
-
-  const categories = Array.from(new Set(integrations.map(i => i.category)));
+  const categories = Array.from(new Set(filteredPlatforms.map(p => p.category)));
 
   return (
-    <>
-      <Navbar />
-      
-      <div className="min-h-screen bg-background">
-        <div className="container mx-auto px-4 lg:px-8 py-12">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-4xl font-bold mb-3">Integration Hub</h1>
-            <p className="text-lg text-muted-foreground max-w-2xl">
-              Connect your work platforms to automatically build your Proof of Process. 
-              Show real progress through authentic data.
-            </p>
-          </div>
-
-          {/* Stats */}
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            <Card className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center">
-                  <CheckCircle2 className="h-6 w-6 text-secondary" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{connectedCount}</div>
-                  <div className="text-sm text-muted-foreground">Connected Platforms</div>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center">
-                  <Database className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <div className="text-2xl font-bold">{totalDataPoints}</div>
-                  <div className="text-sm text-muted-foreground">Data Points Synced</div>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Settings className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium">Auto-sync</span>
-                    <Switch checked={autoSync} onCheckedChange={setAutoSync} />
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Sync every 24 hours
-                  </div>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Proof Strength */}
-          <Card className="p-6 mb-8 bg-gradient-to-br from-secondary/5 to-accent/5 border-secondary/20">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Proof Strength Score</h3>
-                <p className="text-sm text-muted-foreground">
-                  Connect more platforms to increase your credibility
-                </p>
-              </div>
-              <Badge variant="secondary" className="text-lg px-3 py-1">
-                {Math.round((connectedCount / integrations.length) * 100)}%
-              </Badge>
-            </div>
-            <Progress value={(connectedCount / integrations.length) * 100} className="h-3" />
-            <p className="text-xs text-muted-foreground mt-2">
-              {connectedCount} of {integrations.length} recommended integrations connected
-            </p>
-          </Card>
-
-          {/* Integration Cards by Category */}
-          {categories.map(category => (
-            <div key={category} className="mb-8">
-              <h2 className="text-2xl font-bold mb-4">{category}</h2>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {integrations
-                  .filter(int => int.category === category)
-                  .map((integration) => {
-                    const Icon = integration.icon;
-                    return (
-                      <Card 
-                        key={integration.id} 
-                        className={`p-6 transition-all ${
-                          integration.connected 
-                            ? 'border-secondary/50 bg-secondary/5' 
-                            : 'hover:shadow-md'
-                        }`}
-                      >
-                        <div className="flex items-start gap-4 mb-4">
-                          <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
-                            integration.connected 
-                              ? 'bg-secondary/20' 
-                              : 'bg-muted'
-                          }`}>
-                            <Icon className={`h-6 w-6 ${
-                              integration.connected 
-                                ? 'text-secondary' 
-                                : 'text-muted-foreground'
-                            }`} />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-semibold">{integration.name}</h3>
-                              {integration.connected && (
-                                <CheckCircle2 className="h-4 w-4 text-secondary" />
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {integration.description}
-                            </p>
-                          </div>
-                        </div>
-
-                        {integration.connected && (
-                          <div className="mb-4 p-3 bg-background rounded-lg border space-y-2">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Last synced</span>
-                              <span className="font-medium">{integration.lastSync}</span>
-                            </div>
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="text-muted-foreground">Data points</span>
-                              <span className="font-medium">{integration.dataPoints}</span>
-                            </div>
-                          </div>
-                        )}
-
-                        <div className="flex gap-2">
-                          {!integration.connected ? (
-                            <Button 
-                              className="flex-1"
-                              variant="secondary"
-                              onClick={() => handleConnect(integration.id)}
-                              disabled={integration.syncing}
-                            >
-                              {integration.syncing ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                  Connecting...
-                                </>
-                              ) : (
-                                <>
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Connect
-                                </>
-                              )}
-                            </Button>
-                          ) : (
-                            <>
-                              <Button 
-                                variant="outline"
-                                className="flex-1"
-                                onClick={() => handleSync(integration.id)}
-                                disabled={integration.syncing}
-                              >
-                                {integration.syncing ? (
-                                  <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                    Syncing...
-                                  </>
-                                ) : (
-                                  'Sync Now'
-                                )}
-                              </Button>
-                              <Button 
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDisconnect(integration.id)}
-                              >
-                                <Settings className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      </Card>
-                    );
-                  })}
-              </div>
-            </div>
-          ))}
-
-          {/* Info Banner */}
-          <Card className="p-6 bg-primary/5 border-primary/20">
-            <div className="flex gap-4">
-              <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-semibold mb-1">Your data is secure</h4>
-                <p className="text-sm text-muted-foreground">
-                  We only access metadata and activity logs, never your actual content. 
-                  You can disconnect any integration at any time, and all associated data will be removed.
-                </p>
-              </div>
-            </div>
-          </Card>
+    <AppLayout>
+      <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">Integrations & Tools</h1>
+          <p className="text-muted-foreground">
+            Link your project management tools to keep everything connected. These links appear in your workspace and contribute to your Proof of Process.
+          </p>
         </div>
-      </div>
 
-      <Footer />
-    </>
+        {/* Connected Tools */}
+        <section className="mb-10">
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <LinkIcon className="h-5 w-5 text-secondary" />
+            Your Connected Tools ({connectedTools.length})
+          </h2>
+
+          {connectedTools.length === 0 ? (
+            <Card className="p-8 text-center border-dashed">
+              <LinkIcon className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+              <p className="text-sm text-muted-foreground">No tools connected yet. Add your first integration below.</p>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {connectedTools.map(tool => {
+                const platformData = PLATFORMS.find(p => p.name === tool.platform);
+                const isEditing = editingId === tool.id;
+
+                return (
+                  <Card key={tool.id} className="p-4 flex items-center gap-4">
+                    <span className="text-2xl flex-shrink-0">{platformData?.icon || "🔗"}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{tool.platform}</p>
+                      {isEditing ? (
+                        <div className="flex gap-2 mt-1">
+                          <Input
+                            value={editUrl}
+                            onChange={(e) => setEditUrl(e.target.value)}
+                            className="h-8 text-xs"
+                            autoFocus
+                            onKeyPress={(e) => e.key === "Enter" && handleEditSave(tool.id)}
+                          />
+                          <Button size="sm" variant="secondary" className="h-8" onClick={() => handleEditSave(tool.id)}>
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="sm" variant="ghost" className="h-8" onClick={() => setEditingId(null)}>
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <a href={tool.url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-foreground truncate block">
+                          {tool.url}
+                        </a>
+                      )}
+                      <span className="text-[10px] text-muted-foreground">Added {tool.addedAt}</span>
+                    </div>
+                    {!isEditing && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <Button variant="ghost" size="sm" asChild>
+                          <a href={tool.url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => { setEditingId(tool.id); setEditUrl(tool.url); }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleRemove(tool.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* Add New Integration */}
+        <section>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <Plus className="h-5 w-5 text-accent" />
+            Add New Integration
+          </h2>
+
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search platforms..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          {filteredPlatforms.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-6">
+              {searchQuery ? "No platforms match your search." : "All platforms are already connected!"}
+            </p>
+          ) : (
+            categories.map(category => {
+              const catPlatforms = filteredPlatforms.filter(p => p.category === category);
+              if (catPlatforms.length === 0) return null;
+              return (
+                <div key={category} className="mb-6">
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-3 block">{category}</Label>
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {catPlatforms.map(platform => (
+                      <div key={platform.id}>
+                        <Card
+                          className={`p-4 cursor-pointer transition-all hover:border-secondary/50 hover:shadow-sm ${
+                            addingPlatformId === platform.id ? "border-secondary bg-secondary/5" : ""
+                          }`}
+                          onClick={() => {
+                            setAddingPlatformId(addingPlatformId === platform.id ? null : platform.id);
+                            setNewUrl("");
+                          }}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">{platform.icon}</span>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm">{platform.name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{platform.description}</p>
+                            </div>
+                            <Plus className="h-4 w-4 text-muted-foreground ml-auto flex-shrink-0" />
+                          </div>
+                        </Card>
+
+                        {addingPlatformId === platform.id && (
+                          <Card className="mt-2 p-3 border-secondary/30 bg-secondary/5">
+                            <Label className="text-xs mb-1.5 block">Paste your {platform.name} project link</Label>
+                            <div className="flex gap-2">
+                              <Input
+                                placeholder="https://..."
+                                value={newUrl}
+                                onChange={(e) => setNewUrl(e.target.value)}
+                                onKeyPress={(e) => e.key === "Enter" && handleAdd(platform.id)}
+                                autoFocus
+                                className="h-9"
+                              />
+                              <Button size="sm" variant="secondary" onClick={() => handleAdd(platform.id)} disabled={!newUrl.trim()}>
+                                Add
+                              </Button>
+                            </div>
+                          </Card>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </section>
+
+        {/* Info */}
+        <Card className="p-4 mt-8 bg-primary/5 border-primary/20">
+          <div className="flex gap-3">
+            <AlertCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="font-semibold text-sm mb-1">Your links are private</h4>
+              <p className="text-xs text-muted-foreground">
+                Integration links are only visible to your team members. You can manage access from your workspace settings.
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    </AppLayout>
   );
 };
 

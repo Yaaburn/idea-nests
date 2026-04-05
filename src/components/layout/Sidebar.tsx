@@ -5,6 +5,8 @@ import {
   Users, 
   Bell,
   Settings,
+  BarChart3,
+  Lock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useCallback } from "react";
@@ -12,6 +14,7 @@ import { useState, useRef, useCallback } from "react";
 const navItems = [
   { icon: Home, label: "Home", path: "/" },
   { icon: FolderKanban, label: "Your Projects", path: "/your-projects" },
+  { icon: BarChart3, label: "Dashboard", path: "/dashboard", badge: "Incubator" },
   { icon: Users, label: "People", path: "/people" },
 ];
 
@@ -28,8 +31,8 @@ const Sidebar = ({ onExpandChange }: SidebarProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const location = useLocation();
   
-  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const leaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleMouseEnter = useCallback(() => {
     // Clear any pending leave timeout
@@ -105,9 +108,12 @@ const Sidebar = ({ onExpandChange }: SidebarProps) => {
                 isActive && "text-sidebar-primary"
               )} />
               {isExpanded && (
-                <span className="whitespace-nowrap overflow-hidden animate-fade-in">
+                <span className="whitespace-nowrap overflow-hidden animate-fade-in flex-1">
                   {item.label}
                 </span>
+              )}
+              {isExpanded && (item as any).badge && (
+                <Lock className="h-3.5 w-3.5 text-muted-foreground/50 flex-shrink-0" />
               )}
             </NavLink>
           );

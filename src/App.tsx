@@ -13,7 +13,7 @@ import Profile from "./pages/Profile";
 import InvestorRoom from "./pages/InvestorRoom";
 import Settings from "./pages/Settings";
 import IntegrationHub from "./pages/IntegrationHub";
-import ProcessAnalyzer from "./pages/ProcessAnalyzer";
+
 import Workspace from "./pages/Workspace";
 import People from "./pages/People";
 import Notifications from "./pages/Notifications";
@@ -39,7 +39,6 @@ const App = () => (
           <Route path="/investor-room/:id" element={<InvestorRoom />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/integrations" element={<IntegrationHub />} />
-          <Route path="/process-analyzer" element={<ProcessAnalyzer />} />
           <Route path="/your-projects" element={<YourProjects />} />
           <Route path="/workspace/:projectId" element={<ProjectWorkspace />} />
           <Route path="/workspace/:projectId/:section" element={<ProjectWorkspace />} />
