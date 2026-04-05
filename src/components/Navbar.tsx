@@ -26,9 +26,6 @@ const Navbar = () => {
               <a href="/integrations" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Integrations
               </a>
-              <a href="/process-analyzer" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Analyzer
-              </a>
             </div>
           </div>
 
