@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowLeft, Play, MapPin, Clock, Users, Share2, Heart, CheckCircle2, Award } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { ArrowLeft, Play, MapPin, Clock, Users, Share2, Heart, CheckCircle2, Award, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,29 +13,55 @@ import VideoModal from "@/components/VideoModal";
 import ProjectTimeline from "@/components/ProjectTimeline";
 import ProofScore from "@/components/ProofScore";
 import VerificationBadge from "@/components/VerificationBadge";
+import { getCreatedProjectById } from "@/lib/projectStore";
 
 const ProjectDetail = () => {
+  const { id } = useParams<{ id: string }>();
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [showFounderBio, setShowFounderBio] = useState(false);
 
-  const project = {
-    title: "SolarSense - Farm Monitoring",
-    tagline: "Building low-cost solar sensors for farmers to monitor soil and optimize crop yield",
-    coverImage: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200",
-    founderName: "Sarah Chen",
-    founderTitle: "Former IoT Researcher",
-    founderAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-    founderBio: "10 years in agricultural tech. PhD in IoT systems. Grew up on a farm in California.",
-    location: "San Francisco, CA",
-    stage: "Prototype",
-    tags: ["IoT", "Agriculture", "Hardware", "Climate Tech"],
-    contributors: 8,
-    progress: 65,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  };
+  const createdProject = id?.startsWith("user-") ? getCreatedProjectById(id) : null;
 
-  const roles = [
+  const project = createdProject
+    ? {
+        title: createdProject.title,
+        tagline: createdProject.vision || createdProject.whyDoingThis || "A new project on TalentNet",
+        coverImage: createdProject.coverImage || "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200",
+        founderName: "You",
+        founderTitle: "Founder",
+        founderAvatar: createdProject.founderAvatar || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+        founderBio: "",
+        location: "Remote",
+        stage: "Idea",
+        tags: createdProject.tags,
+        contributors: 1,
+        progress: 0,
+        videoUrl: "",
+      }
+    : {
+        title: "SolarSense - Farm Monitoring",
+        tagline: "Building low-cost solar sensors for farmers to monitor soil and optimize crop yield",
+        coverImage: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200",
+        founderName: "Sarah Chen",
+        founderTitle: "Former IoT Researcher",
+        founderAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+        founderBio: "10 years in agricultural tech. PhD in IoT systems. Grew up on a farm in California.",
+        location: "San Francisco, CA",
+        stage: "Prototype",
+        tags: ["IoT", "Agriculture", "Hardware", "Climate Tech"],
+        contributors: 8,
+        progress: 65,
+        videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      };
+
+  const roles = createdProject?.roles?.filter(r => r.title).map(r => ({
+    title: r.title,
+    type: "Open",
+    commitment: "Flexible",
+    equity: "TBD",
+    description: r.description || "No description provided",
+  })) || [
     {
       title: "Embedded Systems Engineer",
       type: "Full-time",
@@ -182,121 +209,179 @@ const ProjectDetail = () => {
 
                     <div className="space-y-4 text-foreground/90 leading-relaxed">
                       <h4 className="text-xl font-semibold text-foreground">Why I'm doing this</h4>
-                      <p>
-                        I grew up watching my parents struggle with unpredictable crop yields. They'd check soil moisture by 
-                        hand—literally digging into the earth daily. Meanwhile, industrial farms had expensive sensor systems 
-                        that cost $10,000+. This gap bothered me throughout my PhD in IoT systems.
-                      </p>
-                      
-                      <blockquote className="border-l-4 border-secondary pl-4 italic text-muted-foreground">
-                        "Small farmers deserve the same technology advantages as large operations. I'm building the future 
-                        I wish my parents had access to."
-                      </blockquote>
-
-                      <p>
-                        After 10 years in agricultural tech research, I've developed a solar-powered sensor that costs under $50 
-                        to manufacture. We've tested it on 15 farms across California with incredible results—30% water savings 
-                        and 18% yield improvement.
-                      </p>
-
-                      <p>
-                        But hardware is just the beginning. We're creating a complete platform: sensors + mobile app + predictive 
-                        analytics. Farmers get real-time alerts on their phones and AI-powered recommendations for irrigation timing.
-                      </p>
+                      {createdProject ? (
+                        <p>{createdProject.whyDoingThis || "No story provided yet."}</p>
+                      ) : (
+                        <>
+                          <p>
+                            I grew up watching my parents struggle with unpredictable crop yields. They'd check soil moisture by 
+                            hand—literally digging into the earth daily. Meanwhile, industrial farms had expensive sensor systems 
+                            that cost $10,000+. This gap bothered me throughout my PhD in IoT systems.
+                          </p>
+                          <blockquote className="border-l-4 border-secondary pl-4 italic text-muted-foreground">
+                            "Small farmers deserve the same technology advantages as large operations. I'm building the future 
+                            I wish my parents had access to."
+                          </blockquote>
+                          <p>
+                            After 10 years in agricultural tech research, I've developed a solar-powered sensor that costs under $50 
+                            to manufacture. We've tested it on 15 farms across California with incredible results—30% water savings 
+                            and 18% yield improvement.
+                          </p>
+                          <p>
+                            But hardware is just the beginning. We're creating a complete platform: sensors + mobile app + predictive 
+                            analytics. Farmers get real-time alerts on their phones and AI-powered recommendations for irrigation timing.
+                          </p>
+                        </>
+                      )}
                     </div>
                   </TabsContent>
                   
                   <TabsContent value="how" className="space-y-4 mt-6">
                     <div className="space-y-4 text-foreground/90 leading-relaxed">
                       <h4 className="text-xl font-semibold text-foreground">Our working style</h4>
-                      <p>
-                        We're a small, focused team that believes in rapid iteration and direct farmer feedback. Every two weeks, 
-                        we deploy updates to our pilot farms and gather real-world data.
-                      </p>
-                      
-                      <div className="grid md:grid-cols-2 gap-4 my-6">
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
-                          <h5 className="font-semibold mb-1">Remote-first</h5>
-                          <p className="text-sm text-muted-foreground">
-                            Work from anywhere. Weekly sync meetings, async-friendly communication
+                      {createdProject ? (
+                        <p>{createdProject.howWeWork || "No working style described yet."}</p>
+                      ) : (
+                        <>
+                          <p>
+                            We're a small, focused team that believes in rapid iteration and direct farmer feedback. Every two weeks, 
+                            we deploy updates to our pilot farms and gather real-world data.
                           </p>
-                        </div>
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
-                          <h5 className="font-semibold mb-1">Equity-based</h5>
-                          <p className="text-sm text-muted-foreground">
-                            Fair compensation tied to our success. Everyone is an owner
-                          </p>
-                        </div>
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
-                          <h5 className="font-semibold mb-1">Field-tested</h5>
-                          <p className="text-sm text-muted-foreground">
-                            We build with farmers, not for them. Regular field visits
-                          </p>
-                        </div>
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
-                          <h5 className="font-semibold mb-1">Open source</h5>
-                          <p className="text-sm text-muted-foreground">
-                            Hardware designs will be open-sourced after product launch
-                          </p>
-                        </div>
-                      </div>
-
-                      <p>
-                        Tech stack: C++ for firmware, React Native for mobile, Python/TensorFlow for ML models. 
-                        Hardware: ESP32 microcontroller, custom PCB design.
-                      </p>
+                          <div className="grid md:grid-cols-2 gap-4 my-6">
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                              <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
+                              <h5 className="font-semibold mb-1">Remote-first</h5>
+                              <p className="text-sm text-muted-foreground">Work from anywhere. Weekly sync meetings, async-friendly communication</p>
+                            </div>
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                              <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
+                              <h5 className="font-semibold mb-1">Equity-based</h5>
+                              <p className="text-sm text-muted-foreground">Fair compensation tied to our success. Everyone is an owner</p>
+                            </div>
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                              <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
+                              <h5 className="font-semibold mb-1">Field-tested</h5>
+                              <p className="text-sm text-muted-foreground">We build with farmers, not for them. Regular field visits</p>
+                            </div>
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                              <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
+                              <h5 className="font-semibold mb-1">Open source</h5>
+                              <p className="text-sm text-muted-foreground">Hardware designs will be open-sourced after product launch</p>
+                            </div>
+                          </div>
+                          <p>Tech stack: C++ for firmware, React Native for mobile, Python/TensorFlow for ML models. Hardware: ESP32 microcontroller, custom PCB design.</p>
+                        </>
+                      )}
                     </div>
                   </TabsContent>
                   
                   <TabsContent value="need" className="space-y-4 mt-6">
                     <h4 className="text-xl font-semibold">Open Positions</h4>
-                    <p className="text-muted-foreground">
-                      We're looking for passionate individuals who want to make a real impact on sustainable agriculture.
-                    </p>
+                    {createdProject ? (
+                      <p className="text-muted-foreground">{createdProject.whatWeNeed || "No requirements specified yet."}</p>
+                    ) : (
+                      <p className="text-muted-foreground">
+                        We're looking for passionate individuals who want to make a real impact on sustainable agriculture.
+                      </p>
+                    )}
 
-                    <div className="space-y-4">
-                      {roles.map((role) => (
-                        <Card key={role.title} className="p-6 hover:shadow-md transition-shadow">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <h5 className="font-semibold text-lg">{role.title}</h5>
-                              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                                <Badge variant="outline" className="text-xs">{role.type}</Badge>
-                                <span>{role.commitment}</span>
-                                <span className="text-secondary font-medium">{role.equity}</span>
+                    {roles.length > 0 ? (
+                      <div className="space-y-4">
+                        {roles.map((role) => (
+                          <Card key={role.title} className="p-6 hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h5 className="font-semibold text-lg">{role.title}</h5>
+                                <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                                  <Badge variant="outline" className="text-xs">{role.type}</Badge>
+                                  <span>{role.commitment}</span>
+                                  <span className="text-secondary font-medium">{role.equity}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-4">{role.description}</p>
-                          <Button variant="secondary" size="sm">
-                            Apply for this role
-                          </Button>
-                        </Card>
-                      ))}
-                    </div>
+                            <p className="text-sm text-muted-foreground mb-4">{role.description}</p>
+                            <Button variant="secondary" size="sm">Apply for this role</Button>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <Card className="p-6 text-center border-dashed">
+                        <p className="text-sm text-muted-foreground">No open positions yet.</p>
+                      </Card>
+                    )}
                   </TabsContent>
                 </Tabs>
               </Card>
+
+              {/* Integrations (for created projects) */}
+              {createdProject && createdProject.integrationLinks.length > 0 && (
+                <Card className="p-8">
+                  <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <LinkIcon className="h-5 w-5" /> Connected Tools
+                  </h3>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {createdProject.integrationLinks.map((link, i) => (
+                      <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <span className="text-lg">🔗</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{link.platform}</p>
+                          <p className="text-xs text-muted-foreground truncate">{link.url}</p>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </Card>
+              )}
 
               {/* Timeline */}
               <Card className="p-8">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-2xl font-bold">Progress Timeline</h3>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href="/integrations">Connect Platforms →</a>
-                  </Button>
+                  {!createdProject && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href="/integrations">Connect Platforms →</a>
+                    </Button>
+                  )}
                 </div>
-                <div className="mb-4 p-4 bg-secondary/5 border border-secondary/20 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    This timeline is automatically generated from connected platforms (GitHub, Notion, Figma). 
-                    Each milestone can be verified by team members or mentors.
-                  </p>
-                </div>
-                <ProjectTimeline />
+
+                {createdProject && createdProject.timelineEntries.length > 0 ? (
+                  <div className="space-y-4">
+                    {createdProject.timelineEntries.map((entry, i) => (
+                      <div key={i} className="flex gap-4">
+                        <div className="flex flex-col items-center">
+                          <div className="w-3 h-3 rounded-full bg-secondary" />
+                          {i < createdProject.timelineEntries.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
+                        </div>
+                        <div className="pb-6 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-xs">{entry.type}</Badge>
+                            {entry.date && <span className="text-xs text-muted-foreground">{entry.date}</span>}
+                            <Badge variant="secondary" className="text-xs">{entry.verification}</Badge>
+                          </div>
+                          <h5 className="font-medium">{entry.title}</h5>
+                          {entry.description && <p className="text-sm text-muted-foreground mt-1">{entry.description}</p>}
+                          {entry.evidenceUrl && (
+                            <a href={entry.evidenceUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-xs text-secondary hover:underline mt-1 inline-block">
+                              View Evidence →
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-4 p-4 bg-secondary/5 border border-secondary/20 rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        This timeline is automatically generated from connected platforms (GitHub, Notion, Figma). 
+                        Each milestone can be verified by team members or mentors.
+                      </p>
+                    </div>
+                    <ProjectTimeline />
+                  </>
+                )}
               </Card>
             </div>
 

@@ -29,6 +29,7 @@ import {
   Trash2
 } from "lucide-react";
 import { toast } from "sonner";
+import { saveCreatedProject, generateProjectId } from "@/lib/projectStore";
 
 // Platform options for integrations step
 const PLATFORMS = [
@@ -208,8 +209,19 @@ const CreateProject = () => {
   };
 
   const handlePublish = () => {
-    toast.success("Project published successfully! Redirecting...");
-    setTimeout(() => navigate("/project/1"), 1500);
+    const project: import("@/lib/projectStore").CreatedProject = {
+      id: generateProjectId(),
+      createdAt: new Date().toISOString(),
+      title, category, tags, coverImage,
+      whyDoingThis, howWeWork, vision,
+      whatWeNeed, roles, milestones,
+      timelineEntries, integrationLinks,
+      founderAvatar, backgroundColor,
+      requireNDA, publicTeaser,
+    };
+    saveCreatedProject(project);
+    toast.success("Dự án đã được tạo thành công!");
+    setTimeout(() => navigate("/your-projects"), 800);
   };
 
   const stepLabels = [
