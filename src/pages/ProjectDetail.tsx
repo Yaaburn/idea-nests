@@ -239,46 +239,39 @@ const ProjectDetail = () => {
                   <TabsContent value="how" className="space-y-4 mt-6">
                     <div className="space-y-4 text-foreground/90 leading-relaxed">
                       <h4 className="text-xl font-semibold text-foreground">Our working style</h4>
-                      <p>
-                        We're a small, focused team that believes in rapid iteration and direct farmer feedback. Every two weeks, 
-                        we deploy updates to our pilot farms and gather real-world data.
-                      </p>
-                      
-                      <div className="grid md:grid-cols-2 gap-4 my-6">
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
-                          <h5 className="font-semibold mb-1">Remote-first</h5>
-                          <p className="text-sm text-muted-foreground">
-                            Work from anywhere. Weekly sync meetings, async-friendly communication
+                      {createdProject ? (
+                        <p>{createdProject.howWeWork || "No working style described yet."}</p>
+                      ) : (
+                        <>
+                          <p>
+                            We're a small, focused team that believes in rapid iteration and direct farmer feedback. Every two weeks, 
+                            we deploy updates to our pilot farms and gather real-world data.
                           </p>
-                        </div>
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
-                          <h5 className="font-semibold mb-1">Equity-based</h5>
-                          <p className="text-sm text-muted-foreground">
-                            Fair compensation tied to our success. Everyone is an owner
-                          </p>
-                        </div>
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
-                          <h5 className="font-semibold mb-1">Field-tested</h5>
-                          <p className="text-sm text-muted-foreground">
-                            We build with farmers, not for them. Regular field visits
-                          </p>
-                        </div>
-                        <div className="p-4 bg-muted/50 rounded-lg">
-                          <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
-                          <h5 className="font-semibold mb-1">Open source</h5>
-                          <p className="text-sm text-muted-foreground">
-                            Hardware designs will be open-sourced after product launch
-                          </p>
-                        </div>
-                      </div>
-
-                      <p>
-                        Tech stack: C++ for firmware, React Native for mobile, Python/TensorFlow for ML models. 
-                        Hardware: ESP32 microcontroller, custom PCB design.
-                      </p>
+                          <div className="grid md:grid-cols-2 gap-4 my-6">
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                              <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
+                              <h5 className="font-semibold mb-1">Remote-first</h5>
+                              <p className="text-sm text-muted-foreground">Work from anywhere. Weekly sync meetings, async-friendly communication</p>
+                            </div>
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                              <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
+                              <h5 className="font-semibold mb-1">Equity-based</h5>
+                              <p className="text-sm text-muted-foreground">Fair compensation tied to our success. Everyone is an owner</p>
+                            </div>
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                              <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
+                              <h5 className="font-semibold mb-1">Field-tested</h5>
+                              <p className="text-sm text-muted-foreground">We build with farmers, not for them. Regular field visits</p>
+                            </div>
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                              <CheckCircle2 className="h-5 w-5 text-secondary mb-2" />
+                              <h5 className="font-semibold mb-1">Open source</h5>
+                              <p className="text-sm text-muted-foreground">Hardware designs will be open-sourced after product launch</p>
+                            </div>
+                          </div>
+                          <p>Tech stack: C++ for firmware, React Native for mobile, Python/TensorFlow for ML models. Hardware: ESP32 microcontroller, custom PCB design.</p>
+                        </>
+                      )}
                     </div>
                   </TabsContent>
                   
