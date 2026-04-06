@@ -1,51 +1,58 @@
 
 
-## Plan: 5 Upgrades — Fix Build Error + Create Project + Integrations + Remove Analyzer + Dashboard + Profile
+## Plan: Connect Create Project → Your Projects → Project Detail
 
-### 0. Fix Build Error (Critical)
-**File:** `src/components/layout/Sidebar.tsx`
-- Change `useRef<NodeJS.Timeout | null>` to `useRef<ReturnType<typeof setTimeout> | null>` (lines 31-32)
+### Goal
+When a user completes the 8-step Create Project flow and clicks "Publish", the project data is saved and immediately appears in "Your Projects". Clicking the project card opens its full profile page (ProjectDetail) populated with the entered data.
 
-### 1. Enhance Create Project — Add Process Timeline + Integrations Steps
-**File:** `src/pages/CreateProject.tsx`
-- Expand from 6 steps to 8 steps
-- **New Step 5 — Process Timeline:** Add timeline entries with event title, date, type (milestone/iteration/review/meeting/launch), description, evidence file field (URL/upload placeholder), and verification type (Auto/Mentor/Institution). Users can add multiple entries to document their journey so far.
-- **New Step 6 — Integrations & Tools:** Simplified integration picker — users add platform + URL pairs (Google Sheets, Trello, Notion, GitHub, Figma, Slack, etc.) to link existing project management tools. Suggested platform chips for quick selection.
-- Renumber existing Step 5 (Visual Identity) → Step 7, Step 6 (Publish) → Step 8
-- Update `totalSteps`, `canGoNext()`, and step rendering
+### Architecture
+A simple **localStorage-based project store** (`src/lib/projectStore.ts`) will bridge the three pages. No backend changes needed.
 
-### 2. Redesign Integration Hub
-**File:** `src/pages/IntegrationHub.tsx`
-- Redesign as project-contextual tool links manager wrapped in AppLayout
-- Two sections: "Your Connected Tools" (linked platforms with URL, edit/remove) and "Add New Integration" (searchable grid with platform icon, name, description, "+ Add" button opening inline URL input)
-- Platforms: Google Sheets, Trello, Asana, Jira, GitHub, GitLab, Figma, Notion, Slack, Google Drive, Miro, Linear
-- Clean card-based UI matching TalentNet design system
+```text
+CreateProject (publish) → save to localStorage
+                              ↓
+YourProjects → reads localStorage + existing mock data
+                              ↓
+ProjectDetail → reads localStorage by ID (or falls back to hardcoded demo)
+```
 
-### 3. Remove Process Analyzer
-**Files:** `src/App.tsx`, `src/components/Navbar.tsx`
-- Remove `/process-analyzer` route and import from App.tsx
-- Remove "Analyzer" link from Navbar
+### Files to Create/Modify
 
-### 4. Dashboard — Add Sidebar Icon + Incubator/Program Manager Gating
-**Files:** `src/components/layout/Sidebar.tsx`, `src/pages/Dashboard.tsx`
-- Add `BarChart3` icon "Dashboard" to Sidebar nav items (between Your Projects and People)
-- Wrap Dashboard in AppLayout instead of Navbar/Footer
-- Add gating UI: show "Incubator / Program Manager" upgrade card for non-authorized users. The term is **"Incubator"** — businesses that buy a program to manage multiple projects with multiple founders.
-
-### 5. Hide Regional Rank on Other Users' Profiles
-**File:** `src/pages/Profile.tsx`
-- Use route param `:id` to determine if viewing own profile vs others
-- If viewing others' profile: hide `RegionalRankCard`
-- If viewing own profile: keep as-is
-
-### Files Modified
-| File | Change |
+| File | Action |
 |------|--------|
-| `src/components/layout/Sidebar.tsx` | Fix NodeJS type + add Dashboard icon |
-| `src/pages/CreateProject.tsx` | Add 2 new steps (Process Timeline + Integrations) |
-| `src/pages/IntegrationHub.tsx` | Redesign as tool links manager |
-| `src/App.tsx` | Remove process-analyzer route |
-| `src/components/Navbar.tsx` | Remove Analyzer link |
-| `src/pages/Dashboard.tsx` | Wrap in AppLayout + incubator gating |
-| `src/pages/Profile.tsx` | Conditionally hide RegionalRankCard |
+| `src/lib/projectStore.ts` | **CREATE** — localStorage CRUD for created projects |
+| `src/pages/CreateProject.tsx` | **MODIFY** — `handlePublish()` saves all form data to store, navigates to `/your-projects` |
+| `src/pages/YourProjects.tsx` | **MODIFY** — Merge stored projects into the list, show count accurately |
+| `src/pages/ProjectDetail.tsx` | **MODIFY** — Read from store by route param `:id`, populate all sections dynamically |
+
+### 1. Project Store (`src/lib/projectStore.ts`)
+- `CreatedProject` interface with all 8-step fields (title, category, tags, cover, story fields, roles, milestones, timeline, integrations, visual identity, publish settings)
+- `getCreatedProjects()` — read from localStorage
+- `getCreatedProjectById(id)` — find one
+- `saveCreatedProject(project)` — append and persist
+- `generateProjectId()` — unique ID prefixed `"user-"` to distinguish from mock data
+
+### 2. CreateProject — Save on Publish
+- In `handlePublish()`: build a `CreatedProject` object from all form state, call `saveCreatedProject()`
+- Navigate to `/your-projects` after save (instead of `/project/1`)
+- Toast: "Dự án đã được tạo thành công!"
+
+### 3. YourProjects — Show Created Projects
+- Import `getCreatedProjects()`, convert each to the existing `Project` card interface:
+  - `name` ← title, `description` ← vision or whyDoingThis, `coverImage` ← coverImage (or placeholder), `stage` ← "Idea", `status` ← "in-progress", `role` ← "leader", `leader.isYou` ← true, `progress` ← 0, `tags` ← tags, `memberCount` ← 1
+- Merge with existing mock data, newest first
+- Update count display to reflect total
+- Clicking a user-created project navigates to `/project/user-xxx` (ProjectDetail)
+
+### 4. ProjectDetail — Dynamic Content from Store
+- Read `:id` param. If ID starts with `"user-"`, load from store
+- Populate: title, tagline (vision), coverImage, tags, founder story tabs (whyDoingThis, howWeWork, whatWeNeed), roles list, milestones → timeline, integrations display
+- If no store match, fall back to existing hardcoded demo data (backward compatible)
+- Apply button and other interactions remain functional
+
+### Edge Cases
+- Empty cover image → use placeholder unsplash image
+- No roles → show "No open positions yet" in the What We Need tab
+- No timeline entries → show empty state in Progress Timeline
+- localStorage unavailable → graceful fallback to empty array
 
