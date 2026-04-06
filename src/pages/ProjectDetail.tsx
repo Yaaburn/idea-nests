@@ -209,27 +209,30 @@ const ProjectDetail = () => {
 
                     <div className="space-y-4 text-foreground/90 leading-relaxed">
                       <h4 className="text-xl font-semibold text-foreground">Why I'm doing this</h4>
-                      <p>
-                        I grew up watching my parents struggle with unpredictable crop yields. They'd check soil moisture by 
-                        hand—literally digging into the earth daily. Meanwhile, industrial farms had expensive sensor systems 
-                        that cost $10,000+. This gap bothered me throughout my PhD in IoT systems.
-                      </p>
-                      
-                      <blockquote className="border-l-4 border-secondary pl-4 italic text-muted-foreground">
-                        "Small farmers deserve the same technology advantages as large operations. I'm building the future 
-                        I wish my parents had access to."
-                      </blockquote>
-
-                      <p>
-                        After 10 years in agricultural tech research, I've developed a solar-powered sensor that costs under $50 
-                        to manufacture. We've tested it on 15 farms across California with incredible results—30% water savings 
-                        and 18% yield improvement.
-                      </p>
-
-                      <p>
-                        But hardware is just the beginning. We're creating a complete platform: sensors + mobile app + predictive 
-                        analytics. Farmers get real-time alerts on their phones and AI-powered recommendations for irrigation timing.
-                      </p>
+                      {createdProject ? (
+                        <p>{createdProject.whyDoingThis || "No story provided yet."}</p>
+                      ) : (
+                        <>
+                          <p>
+                            I grew up watching my parents struggle with unpredictable crop yields. They'd check soil moisture by 
+                            hand—literally digging into the earth daily. Meanwhile, industrial farms had expensive sensor systems 
+                            that cost $10,000+. This gap bothered me throughout my PhD in IoT systems.
+                          </p>
+                          <blockquote className="border-l-4 border-secondary pl-4 italic text-muted-foreground">
+                            "Small farmers deserve the same technology advantages as large operations. I'm building the future 
+                            I wish my parents had access to."
+                          </blockquote>
+                          <p>
+                            After 10 years in agricultural tech research, I've developed a solar-powered sensor that costs under $50 
+                            to manufacture. We've tested it on 15 farms across California with incredible results—30% water savings 
+                            and 18% yield improvement.
+                          </p>
+                          <p>
+                            But hardware is just the beginning. We're creating a complete platform: sensors + mobile app + predictive 
+                            analytics. Farmers get real-time alerts on their phones and AI-powered recommendations for irrigation timing.
+                          </p>
+                        </>
+                      )}
                     </div>
                   </TabsContent>
                   
