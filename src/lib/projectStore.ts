@@ -32,6 +32,7 @@ export interface CreatedProject {
   // Step 8
   requireNDA: boolean;
   publicTeaser: boolean;
+  publishedToFeed: boolean;
 }
 
 const STORAGE_KEY = "talentnet_created_projects";
