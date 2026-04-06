@@ -162,7 +162,7 @@ const Index = () => {
       
       setLoading(false);
     }, 800);
-  }, [loading, hasMore, displayedItems.length]);
+  }, [loading, hasMore, displayedItems.length, allFeedItems]);
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
