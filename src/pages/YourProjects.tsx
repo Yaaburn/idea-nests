@@ -147,10 +147,28 @@ const YourProjects = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
 
-  const filteredAndSortedProjects = useMemo(() => {
-    let result = [...mockProjects];
+  const allProjects = useMemo(() => {
+    const createdProjects = getCreatedProjects();
+    const userProjects: Project[] = createdProjects.map((p) => ({
+      id: p.id,
+      name: p.title,
+      description: p.vision || p.whyDoingThis || "No description",
+      coverImage: p.coverImage || "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400",
+      stage: "Idea",
+      status: "in-progress" as ProjectStatus,
+      role: "leader" as ProjectRole,
+      leader: { name: "You", avatar: p.founderAvatar || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150", isYou: true },
+      progress: 0,
+      tags: p.tags.slice(0, 3),
+      memberCount: 1,
+      daysLeft: undefined,
+    }));
+    return [...userProjects, ...mockProjects];
+  }, []);
 
-    // Filter by search
+  const filteredAndSortedProjects = useMemo(() => {
+    let result = [...allProjects];
+
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -161,13 +179,11 @@ const YourProjects = () => {
       );
     }
 
-    // Sort
     switch (sortBy) {
       case "newest":
-        result.sort((a, b) => parseInt(b.id) - parseInt(a.id));
-        break;
+        break; // already newest first
       case "oldest":
-        result.sort((a, b) => parseInt(a.id) - parseInt(b.id));
+        result.reverse();
         break;
       case "az":
         result.sort((a, b) => a.name.localeCompare(b.name));
@@ -178,7 +194,7 @@ const YourProjects = () => {
     }
 
     return result;
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, allProjects]);
 
   const handleProjectClick = (projectId: string) => {
     navigate(`/workspace/${projectId}`);
