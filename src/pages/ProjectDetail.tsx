@@ -277,49 +277,111 @@ const ProjectDetail = () => {
                   
                   <TabsContent value="need" className="space-y-4 mt-6">
                     <h4 className="text-xl font-semibold">Open Positions</h4>
-                    <p className="text-muted-foreground">
-                      We're looking for passionate individuals who want to make a real impact on sustainable agriculture.
-                    </p>
+                    {createdProject ? (
+                      <p className="text-muted-foreground">{createdProject.whatWeNeed || "No requirements specified yet."}</p>
+                    ) : (
+                      <p className="text-muted-foreground">
+                        We're looking for passionate individuals who want to make a real impact on sustainable agriculture.
+                      </p>
+                    )}
 
-                    <div className="space-y-4">
-                      {roles.map((role) => (
-                        <Card key={role.title} className="p-6 hover:shadow-md transition-shadow">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <h5 className="font-semibold text-lg">{role.title}</h5>
-                              <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                                <Badge variant="outline" className="text-xs">{role.type}</Badge>
-                                <span>{role.commitment}</span>
-                                <span className="text-secondary font-medium">{role.equity}</span>
+                    {roles.length > 0 ? (
+                      <div className="space-y-4">
+                        {roles.map((role) => (
+                          <Card key={role.title} className="p-6 hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <h5 className="font-semibold text-lg">{role.title}</h5>
+                                <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                                  <Badge variant="outline" className="text-xs">{role.type}</Badge>
+                                  <span>{role.commitment}</span>
+                                  <span className="text-secondary font-medium">{role.equity}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-4">{role.description}</p>
-                          <Button variant="secondary" size="sm">
-                            Apply for this role
-                          </Button>
-                        </Card>
-                      ))}
-                    </div>
+                            <p className="text-sm text-muted-foreground mb-4">{role.description}</p>
+                            <Button variant="secondary" size="sm">Apply for this role</Button>
+                          </Card>
+                        ))}
+                      </div>
+                    ) : (
+                      <Card className="p-6 text-center border-dashed">
+                        <p className="text-sm text-muted-foreground">No open positions yet.</p>
+                      </Card>
+                    )}
                   </TabsContent>
                 </Tabs>
               </Card>
+
+              {/* Integrations (for created projects) */}
+              {createdProject && createdProject.integrationLinks.length > 0 && (
+                <Card className="p-8">
+                  <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <LinkIcon className="h-5 w-5" /> Connected Tools
+                  </h3>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {createdProject.integrationLinks.map((link, i) => (
+                      <a key={i} href={link.url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <span className="text-lg">🔗</span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{link.platform}</p>
+                          <p className="text-xs text-muted-foreground truncate">{link.url}</p>
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </Card>
+              )}
 
               {/* Timeline */}
               <Card className="p-8">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-2xl font-bold">Progress Timeline</h3>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href="/integrations">Connect Platforms →</a>
-                  </Button>
+                  {!createdProject && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a href="/integrations">Connect Platforms →</a>
+                    </Button>
+                  )}
                 </div>
-                <div className="mb-4 p-4 bg-secondary/5 border border-secondary/20 rounded-lg">
-                  <p className="text-sm text-muted-foreground">
-                    This timeline is automatically generated from connected platforms (GitHub, Notion, Figma). 
-                    Each milestone can be verified by team members or mentors.
-                  </p>
-                </div>
-                <ProjectTimeline />
+
+                {createdProject && createdProject.timelineEntries.length > 0 ? (
+                  <div className="space-y-4">
+                    {createdProject.timelineEntries.map((entry, i) => (
+                      <div key={i} className="flex gap-4">
+                        <div className="flex flex-col items-center">
+                          <div className="w-3 h-3 rounded-full bg-secondary" />
+                          {i < createdProject.timelineEntries.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
+                        </div>
+                        <div className="pb-6 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge variant="outline" className="text-xs">{entry.type}</Badge>
+                            {entry.date && <span className="text-xs text-muted-foreground">{entry.date}</span>}
+                            <Badge variant="secondary" className="text-xs">{entry.verification}</Badge>
+                          </div>
+                          <h5 className="font-medium">{entry.title}</h5>
+                          {entry.description && <p className="text-sm text-muted-foreground mt-1">{entry.description}</p>}
+                          {entry.evidenceUrl && (
+                            <a href={entry.evidenceUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-xs text-secondary hover:underline mt-1 inline-block">
+                              View Evidence →
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-4 p-4 bg-secondary/5 border border-secondary/20 rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        This timeline is automatically generated from connected platforms (GitHub, Notion, Figma). 
+                        Each milestone can be verified by team members or mentors.
+                      </p>
+                    </div>
+                    <ProjectTimeline />
+                  </>
+                )}
               </Card>
             </div>
 
