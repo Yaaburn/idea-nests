@@ -26,12 +26,13 @@ import {
   GitBranch,
   Milestone,
   Eye,
-  Trash2
+  Trash2,
+  Mail,
+  Briefcase
 } from "lucide-react";
 import { toast } from "sonner";
-import { saveCreatedProject, generateProjectId } from "@/lib/projectStore";
+import { saveCreatedProject, generateProjectId, type TimelineEntry, type TimelineArtifact, type TimelineContributor, type ProjectRole } from "@/lib/projectStore";
 
-// Platform options for integrations step
 const PLATFORMS = [
   { id: "google-sheets", name: "Google Sheets", icon: "📊" },
   { id: "trello", name: "Trello", icon: "📋" },
@@ -49,20 +50,8 @@ const PLATFORMS = [
 
 const EVENT_TYPES = ["Milestone", "Iteration", "Review", "Meeting", "Launch", "Pivot", "Research"];
 const VERIFICATION_TYPES = ["Auto", "Mentor", "Institution"];
-
-interface TimelineEntry {
-  title: string;
-  date: string;
-  type: string;
-  description: string;
-  evidenceUrl: string;
-  verification: string;
-}
-
-interface IntegrationLink {
-  platform: string;
-  url: string;
-}
+const ARTIFACT_TYPES = ["document", "image", "code", "video", "data", "report", "hardware", "app", "design"];
+const ROLE_TYPES = ["Full-time", "Part-time", "Contract", "Freelance", "Open"];
 
 const CreateProject = () => {
   const navigate = useNavigate();
@@ -83,18 +72,18 @@ const CreateProject = () => {
 
   // Step 3: Collaboration Needs
   const [whatWeNeed, setWhatWeNeed] = useState("");
-  const [roles, setRoles] = useState<Array<{ title: string; description: string }>>([]);
+  const [roles, setRoles] = useState<ProjectRole[]>([]);
 
   // Step 4: Milestones
   const [milestones, setMilestones] = useState<Array<{ title: string; date: string }>>([
     { title: "", date: "" }
   ]);
 
-  // Step 5: Process Timeline (NEW)
+  // Step 5: Process Timeline
   const [timelineEntries, setTimelineEntries] = useState<TimelineEntry[]>([]);
 
-  // Step 6: Integrations & Tools (NEW)
-  const [integrationLinks, setIntegrationLinks] = useState<IntegrationLink[]>([]);
+  // Step 6: Integrations & Tools
+  const [integrationLinks, setIntegrationLinks] = useState<Array<{ platform: string; url: string }>>([]);
   const [addingPlatform, setAddingPlatform] = useState<string | null>(null);
   const [newIntegrationUrl, setNewIntegrationUrl] = useState("");
 
@@ -119,13 +108,14 @@ const CreateProject = () => {
     setTags(tags.filter(t => t !== tag));
   };
 
+  // Role helpers
   const addRole = () => {
-    setRoles([...roles, { title: "", description: "" }]);
+    setRoles([...roles, { title: "", description: "", type: "Open", commitment: "", equity: "", skills: [] }]);
   };
 
-  const updateRole = (index: number, field: "title" | "description", value: string) => {
+  const updateRole = (index: number, field: keyof ProjectRole, value: string | string[]) => {
     const newRoles = [...roles];
-    newRoles[index][field] = value;
+    (newRoles[index] as any)[field] = value;
     setRoles(newRoles);
   };
 
@@ -133,6 +123,21 @@ const CreateProject = () => {
     setRoles(roles.filter((_, i) => i !== index));
   };
 
+  const addRoleSkill = (roleIndex: number, skill: string) => {
+    if (skill && !roles[roleIndex].skills.includes(skill)) {
+      const newRoles = [...roles];
+      newRoles[roleIndex].skills = [...newRoles[roleIndex].skills, skill];
+      setRoles(newRoles);
+    }
+  };
+
+  const removeRoleSkill = (roleIndex: number, skill: string) => {
+    const newRoles = [...roles];
+    newRoles[roleIndex].skills = newRoles[roleIndex].skills.filter(s => s !== skill);
+    setRoles(newRoles);
+  };
+
+  // Milestone helpers
   const addMilestone = () => {
     setMilestones([...milestones, { title: "", date: "" }]);
   };
@@ -152,11 +157,12 @@ const CreateProject = () => {
   // Timeline helpers
   const addTimelineEntry = () => {
     setTimelineEntries([...timelineEntries, {
-      title: "", date: "", type: "Milestone", description: "", evidenceUrl: "", verification: "Auto"
+      title: "", date: "", type: "Milestone", description: "", evidenceUrl: "", verification: "Auto",
+      artifacts: [], contributors: []
     }]);
   };
 
-  const updateTimelineEntry = (index: number, field: keyof TimelineEntry, value: string) => {
+  const updateTimelineEntry = (index: number, field: keyof TimelineEntry, value: any) => {
     const updated = [...timelineEntries];
     updated[index] = { ...updated[index], [field]: value };
     setTimelineEntries(updated);
@@ -164,6 +170,44 @@ const CreateProject = () => {
 
   const removeTimelineEntry = (index: number) => {
     setTimelineEntries(timelineEntries.filter((_, i) => i !== index));
+  };
+
+  // Timeline artifact helpers
+  const addArtifact = (entryIndex: number) => {
+    const updated = [...timelineEntries];
+    updated[entryIndex].artifacts = [...updated[entryIndex].artifacts, { type: "document", name: "" }];
+    setTimelineEntries(updated);
+  };
+
+  const updateArtifact = (entryIndex: number, artIndex: number, field: keyof TimelineArtifact, value: string) => {
+    const updated = [...timelineEntries];
+    updated[entryIndex].artifacts[artIndex] = { ...updated[entryIndex].artifacts[artIndex], [field]: value };
+    setTimelineEntries(updated);
+  };
+
+  const removeArtifact = (entryIndex: number, artIndex: number) => {
+    const updated = [...timelineEntries];
+    updated[entryIndex].artifacts = updated[entryIndex].artifacts.filter((_, i) => i !== artIndex);
+    setTimelineEntries(updated);
+  };
+
+  // Timeline contributor helpers
+  const addContributor = (entryIndex: number) => {
+    const updated = [...timelineEntries];
+    updated[entryIndex].contributors = [...updated[entryIndex].contributors, { name: "", email: "" }];
+    setTimelineEntries(updated);
+  };
+
+  const updateContributor = (entryIndex: number, cIndex: number, field: keyof TimelineContributor, value: string) => {
+    const updated = [...timelineEntries];
+    updated[entryIndex].contributors[cIndex] = { ...updated[entryIndex].contributors[cIndex], [field]: value };
+    setTimelineEntries(updated);
+  };
+
+  const removeContributor = (entryIndex: number, cIndex: number) => {
+    const updated = [...timelineEntries];
+    updated[entryIndex].contributors = updated[entryIndex].contributors.filter((_, i) => i !== cIndex);
+    setTimelineEntries(updated);
   };
 
   // Integration helpers
@@ -186,8 +230,8 @@ const CreateProject = () => {
       case 2: return whyDoingThis && howWeWork;
       case 3: return whatWeNeed;
       case 4: return milestones.some(m => m.title);
-      case 5: return true; // timeline optional
-      case 6: return true; // integrations optional
+      case 5: return true;
+      case 6: return true;
       case 7: return true;
       case 8: return true;
       default: return false;
@@ -223,16 +267,19 @@ const CreateProject = () => {
     saveCreatedProject(project);
     if (publishToFeed) {
       toast.success("Dự án đã được tạo và đăng lên bảng tin!");
+      setTimeout(() => navigate("/"), 800);
     } else {
       toast.success("Dự án đã được tạo thành công!");
+      setTimeout(() => navigate("/your-projects"), 800);
     }
-    setTimeout(() => navigate("/your-projects"), 800);
   };
 
   const stepLabels = [
     "Core Info", "Story", "Collaboration", "Milestones",
     "Process Timeline", "Integrations & Tools", "Visual Identity", "Publish Settings"
   ];
+
+  const [roleSkillInputs, setRoleSkillInputs] = useState<Record<number, string>>({});
 
   const renderStep = () => {
     switch (currentStep) {
@@ -301,25 +348,84 @@ const CreateProject = () => {
           <div className="space-y-6">
             <div>
               <Label>What we need from you *</Label>
-              <p className="text-sm text-muted-foreground mb-2">Describe the skills, commitment, and type of collaboration</p>
+              <p className="text-sm text-muted-foreground mb-2">Describe the skills, commitment, and type of collaboration you're looking for</p>
               <Textarea placeholder="We're looking for passionate individuals who..." value={whatWeNeed} onChange={(e) => setWhatWeNeed(e.target.value)} className="min-h-[120px]" />
             </div>
             <Separator />
             <div>
               <div className="flex items-center justify-between mb-3">
-                <Label>Specific Roles (Optional)</Label>
-                <Button onClick={addRole} size="sm" variant="outline"><Plus className="h-4 w-4 mr-1" />Add Role</Button>
+                <div>
+                  <Label className="text-base">Open Positions</Label>
+                  <p className="text-sm text-muted-foreground">Define specific roles you're hiring for</p>
+                </div>
+                <Button onClick={addRole} size="sm" variant="outline"><Plus className="h-4 w-4 mr-1" />Add Position</Button>
               </div>
               <div className="space-y-4">
                 {roles.map((role, index) => (
-                  <Card key={index} className="p-4">
-                    <div className="flex items-start gap-3">
-                      <Users className="h-5 w-5 text-muted-foreground mt-2" />
-                      <div className="flex-1 space-y-3">
-                        <Input placeholder="Role title (e.g., Frontend Developer)" value={role.title} onChange={(e) => updateRole(index, "title", e.target.value)} />
-                        <Textarea placeholder="Role description & requirements..." value={role.description} onChange={(e) => updateRole(index, "description", e.target.value)} className="min-h-[80px]" />
+                  <Card key={index} className="p-5">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="h-5 w-5 text-secondary" />
+                        <span className="font-medium text-sm">Position #{index + 1}</span>
                       </div>
-                      <Button variant="ghost" size="sm" onClick={() => removeRole(index)}><X className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="sm" onClick={() => removeRole(index)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                    <div className="space-y-4">
+                      <Input placeholder="Role title (e.g., Frontend Developer)" value={role.title} onChange={(e) => updateRole(index, "title", e.target.value)} />
+                      
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Type</Label>
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {ROLE_TYPES.map(t => (
+                              <Badge key={t} variant={role.type === t ? "secondary" : "outline"} className="cursor-pointer text-xs" onClick={() => updateRole(index, "type", t)}>
+                                {t}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Commitment</Label>
+                          <Input placeholder="e.g., 20-30 hrs/week" value={role.commitment} onChange={(e) => updateRole(index, "commitment", e.target.value)} className="mt-1" />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Equity / Compensation</Label>
+                          <Input placeholder="e.g., 0.5-1.5% equity" value={role.equity} onChange={(e) => updateRole(index, "equity", e.target.value)} className="mt-1" />
+                        </div>
+                      </div>
+
+                      <Textarea placeholder="Describe responsibilities, requirements, and what the ideal candidate looks like..." value={role.description} onChange={(e) => updateRole(index, "description", e.target.value)} className="min-h-[80px]" />
+                      
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Required Skills</Label>
+                        <div className="flex gap-2 mt-1">
+                          <Input 
+                            placeholder="e.g., React, Python" 
+                            value={roleSkillInputs[index] || ""} 
+                            onChange={(e) => setRoleSkillInputs({ ...roleSkillInputs, [index]: e.target.value })}
+                            onKeyPress={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                addRoleSkill(index, roleSkillInputs[index] || "");
+                                setRoleSkillInputs({ ...roleSkillInputs, [index]: "" });
+                              }
+                            }}
+                          />
+                          <Button size="sm" variant="outline" onClick={() => {
+                            addRoleSkill(index, roleSkillInputs[index] || "");
+                            setRoleSkillInputs({ ...roleSkillInputs, [index]: "" });
+                          }}><Plus className="h-4 w-4" /></Button>
+                        </div>
+                        {role.skills.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {role.skills.map(skill => (
+                              <Badge key={skill} variant="outline" className="gap-1 text-xs">
+                                {skill}<X className="h-2.5 w-2.5 cursor-pointer" onClick={() => removeRoleSkill(index, skill)} />
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </Card>
                 ))}
@@ -357,7 +463,6 @@ const CreateProject = () => {
           </div>
         );
 
-      // NEW STEP 5: Process Timeline
       case 5:
         return (
           <div className="space-y-6">
@@ -368,7 +473,7 @@ const CreateProject = () => {
               <div>
                 <h3 className="font-semibold">Process Timeline</h3>
                 <p className="text-sm text-muted-foreground">
-                  Document your project journey so far — milestones hit, iterations done, reviews completed. This builds your Proof of Process.
+                  Document your project journey — milestones, iterations, reviews. Each entry becomes verifiable Proof of Process.
                 </p>
               </div>
             </div>
@@ -377,7 +482,7 @@ const CreateProject = () => {
               <div className="flex items-center gap-2 text-sm">
                 <Shield className="h-4 w-4 text-secondary" />
                 <span className="font-medium">Why this matters:</span>
-                <span className="text-muted-foreground">Each entry becomes verifiable evidence on your project profile, building trust with investors and collaborators.</span>
+                <span className="text-muted-foreground">Artifacts & contributors build trust with investors and collaborators.</span>
               </div>
             </div>
 
@@ -398,10 +503,10 @@ const CreateProject = () => {
               </Card>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-6">
               {timelineEntries.map((entry, index) => (
-                <Card key={index} className="p-4">
-                  <div className="space-y-3">
+                <Card key={index} className="p-5">
+                  <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-medium text-muted-foreground">Event #{index + 1}</span>
                       <Button variant="ghost" size="sm" onClick={() => removeTimelineEntry(index)}><Trash2 className="h-3.5 w-3.5" /></Button>
@@ -415,12 +520,7 @@ const CreateProject = () => {
                         <Label className="text-xs text-muted-foreground">Event Type</Label>
                         <div className="flex flex-wrap gap-1.5 mt-1">
                           {EVENT_TYPES.map(type => (
-                            <Badge
-                              key={type}
-                              variant={entry.type === type ? "secondary" : "outline"}
-                              className="cursor-pointer text-xs"
-                              onClick={() => updateTimelineEntry(index, "type", type)}
-                            >
+                            <Badge key={type} variant={entry.type === type ? "secondary" : "outline"} className="cursor-pointer text-xs" onClick={() => updateTimelineEntry(index, "type", type)}>
                               {type}
                             </Badge>
                           ))}
@@ -430,12 +530,7 @@ const CreateProject = () => {
                         <Label className="text-xs text-muted-foreground">Verification</Label>
                         <div className="flex flex-wrap gap-1.5 mt-1">
                           {VERIFICATION_TYPES.map(v => (
-                            <Badge
-                              key={v}
-                              variant={entry.verification === v ? "secondary" : "outline"}
-                              className="cursor-pointer text-xs"
-                              onClick={() => updateTimelineEntry(index, "verification", v)}
-                            >
+                            <Badge key={v} variant={entry.verification === v ? "secondary" : "outline"} className="cursor-pointer text-xs" onClick={() => updateTimelineEntry(index, "verification", v)}>
                               {v === "Auto" && "🤖 "}{v === "Mentor" && "👨‍🏫 "}{v === "Institution" && "🏛️ "}{v}
                             </Badge>
                           ))}
@@ -450,7 +545,7 @@ const CreateProject = () => {
                     />
                     <div>
                       <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                        <FileText className="h-3 w-3" /> Evidence (URL to document, screenshot, or file)
+                        <FileText className="h-3 w-3" /> Evidence URL
                       </Label>
                       <Input
                         placeholder="https://drive.google.com/... or upload link"
@@ -459,6 +554,73 @@ const CreateProject = () => {
                         className="mt-1"
                       />
                     </div>
+
+                    {/* Artifacts */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Upload className="h-3 w-3" /> Artifacts ({entry.artifacts.length})
+                        </Label>
+                        <Button size="sm" variant="ghost" onClick={() => addArtifact(index)} className="h-7 text-xs">
+                          <Plus className="h-3 w-3 mr-1" />Add
+                        </Button>
+                      </div>
+                      {entry.artifacts.map((art, ai) => (
+                        <div key={ai} className="flex items-center gap-2 mb-2">
+                          <select
+                            value={art.type}
+                            onChange={(e) => updateArtifact(index, ai, "type", e.target.value)}
+                            className="text-xs border rounded px-2 py-1.5 bg-background"
+                          >
+                            {ARTIFACT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                          <Input
+                            placeholder="Artifact name (e.g., Market Research.pdf)"
+                            value={art.name}
+                            onChange={(e) => updateArtifact(index, ai, "name", e.target.value)}
+                            className="flex-1 h-8 text-sm"
+                          />
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => removeArtifact(index, ai)}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Contributors */}
+                    <div className="border-t pt-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Users className="h-3 w-3" /> Contributors ({entry.contributors.length})
+                        </Label>
+                        <Button size="sm" variant="ghost" onClick={() => addContributor(index)} className="h-7 text-xs">
+                          <Plus className="h-3 w-3 mr-1" />Add
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-2">Add friends on TalentNet or invite by email (optional)</p>
+                      {entry.contributors.map((c, ci) => (
+                        <div key={ci} className="flex items-center gap-2 mb-2">
+                          <Input
+                            placeholder="Name"
+                            value={c.name}
+                            onChange={(e) => updateContributor(index, ci, "name", e.target.value)}
+                            className="flex-1 h-8 text-sm"
+                          />
+                          <div className="flex items-center gap-1 flex-1">
+                            <Mail className="h-3 w-3 text-muted-foreground" />
+                            <Input
+                              placeholder="Email (optional)"
+                              value={c.email || ""}
+                              onChange={(e) => updateContributor(index, ci, "email", e.target.value)}
+                              className="flex-1 h-8 text-sm"
+                            />
+                          </div>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => removeContributor(index, ci)}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </Card>
               ))}
@@ -466,7 +628,6 @@ const CreateProject = () => {
           </div>
         );
 
-      // NEW STEP 6: Integrations & Tools
       case 6:
         return (
           <div className="space-y-6">
@@ -482,7 +643,6 @@ const CreateProject = () => {
               </div>
             </div>
 
-            {/* Connected tools */}
             {integrationLinks.length > 0 && (
               <div className="space-y-2">
                 <Label className="text-sm">Linked Tools ({integrationLinks.length})</Label>
@@ -501,7 +661,6 @@ const CreateProject = () => {
               </div>
             )}
 
-            {/* Add new */}
             <div>
               <Label className="text-sm mb-2 block">Add a tool</Label>
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
@@ -520,7 +679,6 @@ const CreateProject = () => {
               </div>
             </div>
 
-            {/* Inline URL input */}
             {addingPlatform && (
               <Card className="p-4 border-secondary/30 bg-secondary/5">
                 <div className="flex items-center gap-2 mb-3">
@@ -600,8 +758,8 @@ const CreateProject = () => {
               </div>
             </Card>
             <div className="mt-8 p-6 bg-secondary/10 rounded-lg border border-secondary/20">
-              <h4 className="font-semibold mb-2">Ready to publish?</h4>
-              <p className="text-sm text-muted-foreground">Your project will be visible to the community. You can edit it anytime from your dashboard.</p>
+              <h4 className="font-semibold mb-2">Ready to launch?</h4>
+              <p className="text-sm text-muted-foreground">You can save the project privately or publish it to the community feed.</p>
             </div>
           </div>
         );
@@ -650,10 +808,13 @@ const CreateProject = () => {
 
           {roles.length > 0 && (
             <div>
-              <p className="text-sm font-medium mb-2">Roles ({roles.length})</p>
+              <p className="text-sm font-medium mb-2">Open Positions ({roles.length})</p>
               <div className="space-y-1">
                 {roles.filter(r => r.title).map((role, i) => (
-                  <div key={i} className="text-xs px-2 py-1 bg-muted rounded">{role.title}</div>
+                  <div key={i} className="text-xs px-2 py-1.5 bg-muted rounded flex items-center justify-between">
+                    <span>{role.title}</span>
+                    <Badge variant="outline" className="text-[10px]">{role.type}</Badge>
+                  </div>
                 ))}
               </div>
             </div>
@@ -680,9 +841,14 @@ const CreateProject = () => {
               </p>
               <div className="space-y-1">
                 {timelineEntries.filter(e => e.title).map((e, i) => (
-                  <div key={i} className="text-xs px-2 py-1 bg-muted rounded flex items-center justify-between gap-1">
-                    <span className="truncate">{e.title}</span>
-                    <Badge variant="outline" className="text-[10px] px-1 py-0">{e.type}</Badge>
+                  <div key={i} className="text-xs px-2 py-1 bg-muted rounded">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="truncate">{e.title}</span>
+                      <Badge variant="outline" className="text-[10px] px-1 py-0">{e.type}</Badge>
+                    </div>
+                    {e.artifacts.length > 0 && (
+                      <span className="text-muted-foreground">📎 {e.artifacts.length} artifacts</span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -714,7 +880,6 @@ const CreateProject = () => {
       
       <div className="min-h-screen bg-background py-12">
         <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
-          {/* Header */}
           <div className="mb-8">
             <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
               <ArrowLeft className="h-4 w-4 mr-2" />Back
@@ -728,7 +893,6 @@ const CreateProject = () => {
             <Progress value={(currentStep / totalSteps) * 100} className="mt-4" />
           </div>
 
-          {/* Main Content */}
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
               <Card className="p-6">
@@ -745,7 +909,7 @@ const CreateProject = () => {
                   ) : (
                     <div className="flex gap-3">
                       <Button onClick={() => handleSave(false)} disabled={!canGoNext()} variant="outline">
-                        <Check className="h-4 w-4 mr-2" />Tạo dự án
+                        <Check className="h-4 w-4 mr-2" />Lưu dự án
                       </Button>
                       <Button onClick={() => handleSave(true)} disabled={!canGoNext()} variant="secondary">
                         <Check className="h-4 w-4 mr-2" />Tạo & Đăng bài

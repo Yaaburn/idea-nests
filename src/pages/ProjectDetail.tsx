@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { ArrowLeft, Play, MapPin, Clock, Users, Share2, Heart, CheckCircle2, Award, Link as LinkIcon } from "lucide-react";
+import { ArrowLeft, Play, MapPin, Clock, Users, Share2, Heart, CheckCircle2, Award, Link as LinkIcon, Upload, Eye, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -57,10 +57,11 @@ const ProjectDetail = () => {
 
   const roles = createdProject?.roles?.filter(r => r.title).map(r => ({
     title: r.title,
-    type: "Open",
-    commitment: "Flexible",
-    equity: "TBD",
+    type: r.type || "Open",
+    commitment: r.commitment || "Flexible",
+    equity: r.equity || "TBD",
     description: r.description || "No description provided",
+    skills: r.skills || [],
   })) || [
     {
       title: "Embedded Systems Engineer",
@@ -68,6 +69,7 @@ const ProjectDetail = () => {
       commitment: "20-30 hrs/week",
       equity: "0.5-1.5%",
       description: "Design and optimize sensor firmware for ultra-low power consumption",
+      skills: ["C++", "ESP32", "PCB Design"],
     },
     {
       title: "Field Operations Lead",
@@ -75,6 +77,7 @@ const ProjectDetail = () => {
       commitment: "10-15 hrs/week",
       equity: "0.3-0.8%",
       description: "Coordinate pilot deployments with partner farms, gather user feedback",
+      skills: ["Agriculture", "Operations", "User Research"],
     },
     {
       title: "Product Designer",
@@ -82,6 +85,7 @@ const ProjectDetail = () => {
       commitment: "15-20 hrs/week",
       equity: "0.4-1.0%",
       description: "Create intuitive mobile app for farmers to view sensor data and insights",
+      skills: ["Figma", "React Native", "UX Research"],
     },
   ];
 
@@ -100,7 +104,7 @@ const ProjectDetail = () => {
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
           
           <div className="absolute top-6 left-0 right-0 container mx-auto px-4 lg:px-8">
-            <Button variant="ghost" className="gap-2">
+            <Button variant="ghost" className="gap-2" onClick={() => window.history.back()}>
               <ArrowLeft className="h-4 w-4" />
               Back to Projects
             </Button>
@@ -117,8 +121,8 @@ const ProjectDetail = () => {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
                       <Badge>{project.stage}</Badge>
-                      <ProofScore score={75} verifications={3} size="md" />
-                      <VerificationBadge type="mentor" verifier="Dr. James Liu" date="2025-09-23" />
+                      <ProofScore score={createdProject ? 10 : 75} verifications={createdProject ? 0 : 3} size="md" />
+                      {!createdProject && <VerificationBadge type="mentor" verifier="Dr. James Liu" date="2025-09-23" />}
                     </div>
                     <h1 className="text-4xl font-bold mb-3">{project.title}</h1>
                     <p className="text-xl text-muted-foreground">{project.tagline}</p>
@@ -151,7 +155,7 @@ const ProjectDetail = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4" />
-                    <span>Updated 2 days ago</span>
+                    <span>{createdProject ? `Created ${new Date(createdProject.createdAt).toLocaleDateString()}` : "Updated 2 days ago"}</span>
                   </div>
                 </div>
               </Card>
@@ -169,7 +173,7 @@ const ProjectDetail = () => {
                       <AvatarFallback>{project.founderName[0]}</AvatarFallback>
                     </Avatar>
                     
-                    {showFounderBio && (
+                    {showFounderBio && project.founderBio && (
                       <div className="absolute top-full left-0 mt-2 w-64 p-4 bg-card border rounded-lg shadow-xl z-50 animate-fade-in">
                         <p className="text-sm font-medium mb-1">{project.founderName}</p>
                         <p className="text-xs text-muted-foreground mb-2">{project.founderTitle}</p>
@@ -192,20 +196,22 @@ const ProjectDetail = () => {
                   </TabsList>
                   
                   <TabsContent value="story" className="space-y-4 mt-6">
-                    <div className="relative cursor-pointer group" onClick={() => setIsVideoModalOpen(true)}>
-                      <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                        <img 
-                          src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800" 
-                          alt="Project video thumbnail"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/50 transition-colors rounded-lg">
-                        <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <Play className="h-8 w-8 text-primary ml-1" />
+                    {!createdProject && (
+                      <div className="relative cursor-pointer group" onClick={() => setIsVideoModalOpen(true)}>
+                        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+                          <img 
+                            src="https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=800" 
+                            alt="Project video thumbnail"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/50 transition-colors rounded-lg">
+                          <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <Play className="h-8 w-8 text-primary ml-1" />
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     <div className="space-y-4 text-foreground/90 leading-relaxed">
                       <h4 className="text-xl font-semibold text-foreground">Why I'm doing this</h4>
@@ -226,10 +232,6 @@ const ProjectDetail = () => {
                             After 10 years in agricultural tech research, I've developed a solar-powered sensor that costs under $50 
                             to manufacture. We've tested it on 15 farms across California with incredible results—30% water savings 
                             and 18% yield improvement.
-                          </p>
-                          <p>
-                            But hardware is just the beginning. We're creating a complete platform: sensors + mobile app + predictive 
-                            analytics. Farmers get real-time alerts on their phones and AI-powered recommendations for irrigation timing.
                           </p>
                         </>
                       )}
@@ -269,7 +271,6 @@ const ProjectDetail = () => {
                               <p className="text-sm text-muted-foreground">Hardware designs will be open-sourced after product launch</p>
                             </div>
                           </div>
-                          <p>Tech stack: C++ for firmware, React Native for mobile, Python/TensorFlow for ML models. Hardware: ESP32 microcontroller, custom PCB design.</p>
                         </>
                       )}
                     </div>
@@ -277,9 +278,10 @@ const ProjectDetail = () => {
                   
                   <TabsContent value="need" className="space-y-4 mt-6">
                     <h4 className="text-xl font-semibold">Open Positions</h4>
-                    {createdProject ? (
-                      <p className="text-muted-foreground">{createdProject.whatWeNeed || "No requirements specified yet."}</p>
-                    ) : (
+                    {createdProject && createdProject.whatWeNeed && (
+                      <p className="text-muted-foreground">{createdProject.whatWeNeed}</p>
+                    )}
+                    {!createdProject && (
                       <p className="text-muted-foreground">
                         We're looking for passionate individuals who want to make a real impact on sustainable agriculture.
                       </p>
@@ -294,13 +296,20 @@ const ProjectDetail = () => {
                                 <h5 className="font-semibold text-lg">{role.title}</h5>
                                 <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
                                   <Badge variant="outline" className="text-xs">{role.type}</Badge>
-                                  <span>{role.commitment}</span>
-                                  <span className="text-secondary font-medium">{role.equity}</span>
+                                  {role.commitment && <span>⏱ {role.commitment}</span>}
+                                  {role.equity && <span className="text-secondary font-medium">💰 {role.equity}</span>}
                                 </div>
                               </div>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-4">{role.description}</p>
-                            <Button variant="secondary" size="sm">Apply for this role</Button>
+                            <p className="text-sm text-muted-foreground mb-3">{role.description}</p>
+                            {role.skills && role.skills.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mb-4">
+                                {role.skills.map(skill => (
+                                  <Badge key={skill} variant="secondary" className="text-xs">{skill}</Badge>
+                                ))}
+                              </div>
+                            )}
+                            <Button variant="secondary" size="sm" onClick={() => setIsApplyModalOpen(true)}>Apply for this role</Button>
                           </Card>
                         ))}
                       </div>
@@ -313,7 +322,7 @@ const ProjectDetail = () => {
                 </Tabs>
               </Card>
 
-              {/* Integrations (for created projects) */}
+              {/* Integrations */}
               {createdProject && createdProject.integrationLinks.length > 0 && (
                 <Card className="p-8">
                   <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
@@ -346,31 +355,102 @@ const ProjectDetail = () => {
                 </div>
 
                 {createdProject && createdProject.timelineEntries.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-8">
                     {createdProject.timelineEntries.map((entry, i) => (
-                      <div key={i} className="flex gap-4">
-                        <div className="flex flex-col items-center">
-                          <div className="w-3 h-3 rounded-full bg-secondary" />
-                          {i < createdProject.timelineEntries.length - 1 && <div className="w-0.5 flex-1 bg-border" />}
-                        </div>
-                        <div className="pb-6 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline" className="text-xs">{entry.type}</Badge>
-                            {entry.date && <span className="text-xs text-muted-foreground">{entry.date}</span>}
-                            <Badge variant="secondary" className="text-xs">{entry.verification}</Badge>
+                      <div key={i} className="relative flex gap-6 group">
+                        {i < createdProject.timelineEntries.length - 1 && (
+                          <div className="absolute left-3 top-8 bottom-0 w-0.5 bg-border group-hover:bg-secondary/30 transition-colors" />
+                        )}
+                        <div className="relative flex-shrink-0">
+                          <div className="relative z-10 bg-background">
+                            <CheckCircle2 className="h-6 w-6 text-secondary" />
                           </div>
-                          <h5 className="font-medium">{entry.title}</h5>
-                          {entry.description && <p className="text-sm text-muted-foreground mt-1">{entry.description}</p>}
+                        </div>
+                        <div className="flex-1 pb-8">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h4 className="text-lg font-semibold">{entry.title}</h4>
+                              <p className="text-sm text-muted-foreground">{entry.date}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">{entry.type}</Badge>
+                              <Badge variant="secondary" className="text-xs">
+                                {entry.verification === "Auto" && "🤖 "}{entry.verification === "Mentor" && "👨‍🏫 "}{entry.verification === "Institution" && "🏛️ "}
+                                {entry.verification}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          {entry.description && (
+                            <p className="text-sm text-muted-foreground mb-3">{entry.description}</p>
+                          )}
+
+                          {/* Artifacts */}
+                          {entry.artifacts && entry.artifacts.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              <div className="text-sm font-medium flex items-center gap-2">
+                                <Upload className="h-4 w-4" />
+                                Artifacts ({entry.artifacts.length})
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                {entry.artifacts.map((artifact, ai) => (
+                                  <button
+                                    key={ai}
+                                    className="flex items-center gap-2 p-3 bg-muted/50 hover:bg-muted rounded-lg text-left text-sm transition-colors group/artifact"
+                                  >
+                                    <div className="w-10 h-10 rounded bg-secondary/10 flex items-center justify-center flex-shrink-0">
+                                      <Eye className="h-4 w-4 text-secondary" />
+                                    </div>
+                                    <div className="min-w-0">
+                                      <span className="truncate block group-hover/artifact:text-secondary transition-colors">
+                                        {artifact.name}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground capitalize">{artifact.type}</span>
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Contributors */}
+                          {entry.contributors && entry.contributors.length > 0 && (
+                            <div className="mt-4 flex items-center gap-3">
+                              <span className="text-sm text-muted-foreground">Contributors:</span>
+                              <div className="flex -space-x-2">
+                                {entry.contributors.map((contributor, ci) => (
+                                  <Avatar key={ci} className="h-8 w-8 border-2 border-background">
+                                    {contributor.avatar ? (
+                                      <AvatarImage src={contributor.avatar} />
+                                    ) : null}
+                                    <AvatarFallback className="text-xs">{contributor.name ? contributor.name[0] : "?"}</AvatarFallback>
+                                  </Avatar>
+                                ))}
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {entry.contributors.map(c => c.name).filter(Boolean).join(", ")}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* Evidence link */}
                           {entry.evidenceUrl && (
-                            <a href={entry.evidenceUrl} target="_blank" rel="noopener noreferrer"
-                              className="text-xs text-secondary hover:underline mt-1 inline-block">
-                              View Evidence →
-                            </a>
+                            <div className="mt-3 flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-secondary" />
+                              <a href={entry.evidenceUrl} target="_blank" rel="noopener noreferrer"
+                                className="text-xs text-secondary hover:underline">
+                                View Evidence →
+                              </a>
+                            </div>
                           )}
                         </div>
                       </div>
                     ))}
                   </div>
+                ) : createdProject ? (
+                  <Card className="p-8 text-center border-dashed">
+                    <p className="text-sm text-muted-foreground">No timeline events added yet. Add events from your workspace to build Proof of Process.</p>
+                  </Card>
                 ) : (
                   <>
                     <div className="mb-4 p-4 bg-secondary/5 border border-secondary/20 rounded-lg">
@@ -422,45 +502,37 @@ const ProjectDetail = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Milestones completed</span>
-                      <span className="font-medium">4/7</span>
+                      <span className="font-medium">{createdProject ? `0/${createdProject.milestones.filter(m => m.title).length}` : "4/7"}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Investors watching</span>
-                      <span className="font-medium">23</span>
+                      <span className="text-muted-foreground">Open positions</span>
+                      <span className="font-medium">{roles.length}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Proof Score</span>
-                      <span className="font-medium">75/100</span>
+                      <span className="font-medium">{createdProject ? "10" : "75"}/100</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-4 border-t space-y-3">
-                  <h4 className="font-semibold mb-2">Verifications</h4>
-                  <div className="space-y-2">
-                    <VerificationBadge 
-                      type="mentor" 
-                      verifier="Dr. James Liu" 
-                      date="2025-09-23" 
-                    />
-                    <VerificationBadge 
-                      type="institution" 
-                      verifier="Stanford Innovation Lab" 
-                      date="2025-09-15" 
-                    />
-                    <VerificationBadge 
-                      type="auto" 
-                      date="2025-10-01" 
-                    />
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Award className="h-4 w-4 text-secondary" />
-                    <span>YC S23 Finalist</span>
-                  </div>
-                </div>
+                {!createdProject && (
+                  <>
+                    <div className="pt-4 border-t space-y-3">
+                      <h4 className="font-semibold mb-2">Verifications</h4>
+                      <div className="space-y-2">
+                        <VerificationBadge type="mentor" verifier="Dr. James Liu" date="2025-09-23" />
+                        <VerificationBadge type="institution" verifier="Stanford Innovation Lab" date="2025-09-15" />
+                        <VerificationBadge type="auto" date="2025-10-01" />
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Award className="h-4 w-4 text-secondary" />
+                        <span>YC S23 Finalist</span>
+                      </div>
+                    </div>
+                  </>
+                )}
               </Card>
             </div>
           </div>
