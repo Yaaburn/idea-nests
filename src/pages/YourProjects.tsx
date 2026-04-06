@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { getCreatedProjects } from "@/lib/projectStore";
 
 type SortOption = "newest" | "oldest" | "az" | "za";
 type ProjectStatus = "in-progress" | "completed" | "upcoming";
