@@ -197,7 +197,11 @@ const YourProjects = () => {
   }, [searchQuery, sortBy, allProjects]);
 
   const handleProjectClick = (projectId: string) => {
-    navigate(`/workspace/${projectId}`);
+    if (projectId.startsWith("user-")) {
+      navigate(`/project/${projectId}`);
+    } else {
+      navigate(`/workspace/${projectId}`);
+    }
   };
 
   return (
