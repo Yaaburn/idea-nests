@@ -208,7 +208,7 @@ const CreateProject = () => {
     }
   };
 
-  const handlePublish = () => {
+  const handleSave = (publishToFeed: boolean) => {
     const project: import("@/lib/projectStore").CreatedProject = {
       id: generateProjectId(),
       createdAt: new Date().toISOString(),
@@ -218,9 +218,14 @@ const CreateProject = () => {
       timelineEntries, integrationLinks,
       founderAvatar, backgroundColor,
       requireNDA, publicTeaser,
+      publishedToFeed: publishToFeed,
     };
     saveCreatedProject(project);
-    toast.success("Dự án đã được tạo thành công!");
+    if (publishToFeed) {
+      toast.success("Dự án đã được tạo và đăng lên bảng tin!");
+    } else {
+      toast.success("Dự án đã được tạo thành công!");
+    }
     setTimeout(() => navigate("/your-projects"), 800);
   };
 
@@ -738,9 +743,14 @@ const CreateProject = () => {
                       Next<ArrowRight className="h-4 w-4 ml-2" />
                     </Button>
                   ) : (
-                    <Button onClick={handlePublish} disabled={!canGoNext()} variant="secondary">
-                      <Check className="h-4 w-4 mr-2" />Publish Project
-                    </Button>
+                    <div className="flex gap-3">
+                      <Button onClick={() => handleSave(false)} disabled={!canGoNext()} variant="outline">
+                        <Check className="h-4 w-4 mr-2" />Tạo dự án
+                      </Button>
+                      <Button onClick={() => handleSave(true)} disabled={!canGoNext()} variant="secondary">
+                        <Check className="h-4 w-4 mr-2" />Tạo & Đăng bài
+                      </Button>
+                    </div>
                   )}
                 </div>
               </Card>
