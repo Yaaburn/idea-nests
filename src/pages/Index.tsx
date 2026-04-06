@@ -152,7 +152,7 @@ const Index = () => {
     // Simulate API call
     setTimeout(() => {
       const currentLength = displayedItems.length;
-      const nextItems = feedItems.slice(currentLength, currentLength + 2);
+      const nextItems = allFeedItems.slice(currentLength, currentLength + 2);
       
       if (nextItems.length === 0) {
         setHasMore(false);
