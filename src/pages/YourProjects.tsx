@@ -212,7 +212,7 @@ const YourProjects = () => {
           <div>
             <h1 className="text-2xl font-bold">Your Projects</h1>
             <p className="text-muted-foreground text-sm mt-1">
-              {mockProjects.length} projects you're involved in
+              {allProjects.length} projects you're involved in
             </p>
           </div>
 
