@@ -55,7 +55,13 @@ const ProjectDetail = () => {
         videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
       };
 
-  const roles = [
+  const roles = createdProject?.roles?.filter(r => r.title).map(r => ({
+    title: r.title,
+    type: "Open",
+    commitment: "Flexible",
+    equity: "TBD",
+    description: r.description || "No description provided",
+  })) || [
     {
       title: "Embedded Systems Engineer",
       type: "Full-time",
