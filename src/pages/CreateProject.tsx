@@ -29,6 +29,7 @@ import {
   Trash2
 } from "lucide-react";
 import { toast } from "sonner";
+import { saveCreatedProject, generateProjectId } from "@/lib/projectStore";
 
 // Platform options for integrations step
 const PLATFORMS = [
