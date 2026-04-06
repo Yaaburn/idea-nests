@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowLeft, Play, MapPin, Clock, Users, Share2, Heart, CheckCircle2, Award } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { ArrowLeft, Play, MapPin, Clock, Users, Share2, Heart, CheckCircle2, Award, Link as LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,27 +13,47 @@ import VideoModal from "@/components/VideoModal";
 import ProjectTimeline from "@/components/ProjectTimeline";
 import ProofScore from "@/components/ProofScore";
 import VerificationBadge from "@/components/VerificationBadge";
+import { getCreatedProjectById } from "@/lib/projectStore";
 
 const ProjectDetail = () => {
+  const { id } = useParams<{ id: string }>();
   const [isApplyModalOpen, setIsApplyModalOpen] = useState(false);
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [showFounderBio, setShowFounderBio] = useState(false);
 
-  const project = {
-    title: "SolarSense - Farm Monitoring",
-    tagline: "Building low-cost solar sensors for farmers to monitor soil and optimize crop yield",
-    coverImage: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200",
-    founderName: "Sarah Chen",
-    founderTitle: "Former IoT Researcher",
-    founderAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
-    founderBio: "10 years in agricultural tech. PhD in IoT systems. Grew up on a farm in California.",
-    location: "San Francisco, CA",
-    stage: "Prototype",
-    tags: ["IoT", "Agriculture", "Hardware", "Climate Tech"],
-    contributors: 8,
-    progress: 65,
-    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-  };
+  const createdProject = id?.startsWith("user-") ? getCreatedProjectById(id) : null;
+
+  const project = createdProject
+    ? {
+        title: createdProject.title,
+        tagline: createdProject.vision || createdProject.whyDoingThis || "A new project on TalentNet",
+        coverImage: createdProject.coverImage || "https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200",
+        founderName: "You",
+        founderTitle: "Founder",
+        founderAvatar: createdProject.founderAvatar || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+        founderBio: "",
+        location: "Remote",
+        stage: "Idea",
+        tags: createdProject.tags,
+        contributors: 1,
+        progress: 0,
+        videoUrl: "",
+      }
+    : {
+        title: "SolarSense - Farm Monitoring",
+        tagline: "Building low-cost solar sensors for farmers to monitor soil and optimize crop yield",
+        coverImage: "https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=1200",
+        founderName: "Sarah Chen",
+        founderTitle: "Former IoT Researcher",
+        founderAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+        founderBio: "10 years in agricultural tech. PhD in IoT systems. Grew up on a farm in California.",
+        location: "San Francisco, CA",
+        stage: "Prototype",
+        tags: ["IoT", "Agriculture", "Hardware", "Climate Tech"],
+        contributors: 8,
+        progress: 65,
+        videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      };
 
   const roles = [
     {
