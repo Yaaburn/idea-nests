@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, Users, Briefcase, ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import ChatDock, { ChatWindow } from "@/components/home/ChatDock";
+import { getCreatedProjects } from "@/lib/projectStore";
 
 const feedItems = [
   {
@@ -107,7 +108,33 @@ const trendingTags = ["AI", "Climate Tech", "EdTech", "HealthTech", "Web3"];
 
 const Index = () => {
   const [filters, setFilters] = useState({ type: "all", role: "all", tags: [] as string[] });
-  const [displayedItems, setDisplayedItems] = useState(feedItems.slice(0, 3));
+
+  // Merge published user projects into feed
+  const allFeedItems = useMemo(() => {
+    const publishedProjects = getCreatedProjects().filter(p => p.publishedToFeed);
+    const userFeedItems = publishedProjects.map(p => ({
+      id: p.id,
+      type: "project" as const,
+      title: p.title,
+      description: p.vision || p.whyDoingThis || "Một dự án mới trên TalentNet.",
+      image: p.coverImage || "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800",
+      author: {
+        name: "You",
+        avatar: p.founderAvatar || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
+        role: "Founder",
+        verified: false,
+      },
+      projectName: p.title,
+      tags: p.tags,
+      lookingFor: p.roles.map(r => r.title).slice(0, 2),
+      stats: { likes: 0, comments: 0 },
+      timestamp: "Vừa xong",
+      stage: p.category || "Idea",
+    }));
+    return [...userFeedItems, ...feedItems];
+  }, []);
+
+  const [displayedItems, setDisplayedItems] = useState(allFeedItems.slice(0, 3));
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const observerRef = useRef<IntersectionObserver | null>(null);
