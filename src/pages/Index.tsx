@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import FeedFilters from "@/components/feed/FeedFilters";
 import FeedCard from "@/components/feed/FeedCard";
