@@ -131,6 +131,23 @@ const TaskBoard = () => {
   // Current user mock
   const currentUser = "Sarah Chen";
 
+  // Log overdue events on mount for tasks past due date
+  useState(() => {
+    const now = new Date();
+    initialColumns.forEach(col => {
+      if (col.id === "done") return;
+      col.tasks.forEach(task => {
+        if (task.dueDate && new Date(task.dueDate) < now) {
+          logFeedEvent({
+            type: "task_overdue",
+            actor: "system",
+            data: { taskId: task.id, taskTitle: task.title, milestone: task.milestone },
+          });
+        }
+      });
+    });
+  });
+
   const filterTasks = useCallback((tasks: Task[]) => {
     return tasks.filter(task => {
       if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
