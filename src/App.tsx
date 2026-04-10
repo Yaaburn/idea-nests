@@ -20,6 +20,7 @@ import Notifications from "./pages/Notifications";
 import ProjectAnalysis from "./pages/ProjectAnalysis";
 import YourProjects from "./pages/YourProjects";
 import ProjectWorkspace from "./pages/ProjectWorkspace";
+import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/people" element={<People />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/project-analysis/:projectId" element={<ProjectAnalysis />} />
+          <Route path="/auth" element={<Auth />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
