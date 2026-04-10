@@ -9,10 +9,12 @@ import {
   CheckCircle2,
   PanelRightClose,
   PanelRightOpen,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Reminder, SmartSuggestion } from "./PlannerTypes";
 import { DAYS } from "./PlannerTypes";
+import { getFeedEvents, type FeedEvent } from "@/lib/eventLog";
 
 interface Props {
   isOpen: boolean;
@@ -35,6 +37,21 @@ const mockReminders: Reminder[] = [
 
 const PlannerRightSidebar = ({ isOpen, onToggle, currentDate, onDateSelect, visibleDays = [] }: Props) => {
   const [miniCalMonth, setMiniCalMonth] = useState(new Date(currentDate));
+  const [overdueAlerts, setOverdueAlerts] = useState<FeedEvent[]>([]);
+
+  // Listen for overdue / completed events to show high-alert items
+  useEffect(() => {
+    const load = () => {
+      const events = getFeedEvents();
+      // Show tasks that were logged as overdue (or moved but originally overdue)
+      const overdue = events.filter(e => e.type === "task_overdue" || (e.type === "task_moved" && e.data.columnTo !== "done"));
+      setOverdueAlerts(overdue.slice(0, 5));
+    };
+    load();
+    const handler = () => load();
+    window.addEventListener("feed-event", handler);
+    return () => window.removeEventListener("feed-event", handler);
+  }, []);
 
   useEffect(() => {
     setMiniCalMonth(new Date(currentDate));
@@ -198,6 +215,26 @@ const PlannerRightSidebar = ({ isOpen, onToggle, currentDate, onDateSelect, visi
           ))}
         </div>
       </div>
+
+      {/* High Alerts — Overdue Tasks */}
+      {overdueAlerts.length > 0 && (
+        <div className="px-4 pb-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-destructive">High Alert</span>
+          </div>
+          <div className="space-y-2">
+            {overdueAlerts.map(evt => (
+              <div key={evt.id} className="rounded-lg p-3 bg-destructive/10 border border-destructive/20">
+                <p className="text-xs font-medium text-destructive truncate">{evt.data.taskTitle}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  {evt.data.milestone ?? "No milestone"} · {new Date(evt.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Reminders */}
       <div className="px-4 pb-4">

@@ -9,6 +9,7 @@ import InlineTaskComposer from "./InlineTaskComposer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Task, Column, COLUMN_STATUS_COLORS } from "./taskTypes";
+import { logFeedEvent } from "@/lib/eventLog";
 
 const initialColumns: Column[] = [
   {
@@ -169,6 +170,19 @@ const TaskBoard = () => {
       const [task] = sourceColumn.tasks.splice(taskIndex, 1);
       targetColumn.tasks.push(task);
 
+      // Log feed event for task moves
+      logFeedEvent({
+        type: targetColumnId === "done" ? "task_completed" : "task_moved",
+        actor: currentUser,
+        data: {
+          taskId: task.id,
+          taskTitle: task.title,
+          columnFrom: sourceColumnId,
+          columnTo: targetColumnId,
+          milestone: task.milestone,
+        },
+      });
+
       return newColumns;
     });
   }, []);
@@ -205,8 +219,19 @@ const TaskBoard = () => {
           : col
       )
     );
+
+    logFeedEvent({
+      type: "task_created",
+      actor: currentUser,
+      data: {
+        taskId: task.id,
+        taskTitle: task.title,
+        milestone: task.milestone,
+      },
+    });
+
     setActiveComposerColumn(null);
-  }, [activeComposerColumn]);
+  }, [activeComposerColumn, currentUser]);
 
   return (
     <div className="space-y-4">
