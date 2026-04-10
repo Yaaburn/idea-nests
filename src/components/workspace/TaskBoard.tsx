@@ -9,6 +9,7 @@ import InlineTaskComposer from "./InlineTaskComposer";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Task, Column, COLUMN_STATUS_COLORS } from "./taskTypes";
+import { logFeedEvent } from "@/lib/eventLog";
 
 const initialColumns: Column[] = [
   {
@@ -130,6 +131,23 @@ const TaskBoard = () => {
   // Current user mock
   const currentUser = "Sarah Chen";
 
+  // Log overdue events on mount for tasks past due date
+  useState(() => {
+    const now = new Date();
+    initialColumns.forEach(col => {
+      if (col.id === "done") return;
+      col.tasks.forEach(task => {
+        if (task.dueDate && new Date(task.dueDate) < now) {
+          logFeedEvent({
+            type: "task_overdue",
+            actor: "system",
+            data: { taskId: task.id, taskTitle: task.title, milestone: task.milestone },
+          });
+        }
+      });
+    });
+  });
+
   const filterTasks = useCallback((tasks: Task[]) => {
     return tasks.filter(task => {
       if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -169,6 +187,19 @@ const TaskBoard = () => {
       const [task] = sourceColumn.tasks.splice(taskIndex, 1);
       targetColumn.tasks.push(task);
 
+      // Log feed event for task moves
+      logFeedEvent({
+        type: targetColumnId === "done" ? "task_completed" : "task_moved",
+        actor: currentUser,
+        data: {
+          taskId: task.id,
+          taskTitle: task.title,
+          columnFrom: sourceColumnId,
+          columnTo: targetColumnId,
+          milestone: task.milestone,
+        },
+      });
+
       return newColumns;
     });
   }, []);
@@ -205,8 +236,19 @@ const TaskBoard = () => {
           : col
       )
     );
+
+    logFeedEvent({
+      type: "task_created",
+      actor: currentUser,
+      data: {
+        taskId: task.id,
+        taskTitle: task.title,
+        milestone: task.milestone,
+      },
+    });
+
     setActiveComposerColumn(null);
-  }, [activeComposerColumn]);
+  }, [activeComposerColumn, currentUser]);
 
   return (
     <div className="space-y-4">
