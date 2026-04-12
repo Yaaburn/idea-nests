@@ -9,12 +9,18 @@ import {
   CheckCircle2,
   PanelRightClose,
   PanelRightOpen,
+<<<<<<< HEAD
   AlertTriangle,
+=======
+>>>>>>> 0ddc1f9bb206cf4437ddaf25d840b99db713fd9a
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Reminder, SmartSuggestion } from "./PlannerTypes";
 import { DAYS } from "./PlannerTypes";
+<<<<<<< HEAD
 import { getFeedEvents, type FeedEvent } from "@/lib/eventLog";
+=======
+>>>>>>> 0ddc1f9bb206cf4437ddaf25d840b99db713fd9a
 
 interface Props {
   isOpen: boolean;
@@ -37,6 +43,7 @@ const mockReminders: Reminder[] = [
 
 const PlannerRightSidebar = ({ isOpen, onToggle, currentDate, onDateSelect, visibleDays = [] }: Props) => {
   const [miniCalMonth, setMiniCalMonth] = useState(new Date(currentDate));
+<<<<<<< HEAD
   const [overdueAlerts, setOverdueAlerts] = useState<FeedEvent[]>([]);
 
   // Listen for overdue / completed events to show high-alert items
@@ -52,6 +59,8 @@ const PlannerRightSidebar = ({ isOpen, onToggle, currentDate, onDateSelect, visi
     window.addEventListener("feed-event", handler);
     return () => window.removeEventListener("feed-event", handler);
   }, []);
+=======
+>>>>>>> 0ddc1f9bb206cf4437ddaf25d840b99db713fd9a
 
   useEffect(() => {
     setMiniCalMonth(new Date(currentDate));
@@ -216,6 +225,7 @@ const PlannerRightSidebar = ({ isOpen, onToggle, currentDate, onDateSelect, visi
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* High Alerts — Overdue Tasks */}
       {overdueAlerts.length > 0 && (
         <div className="px-4 pb-4">
@@ -236,6 +246,8 @@ const PlannerRightSidebar = ({ isOpen, onToggle, currentDate, onDateSelect, visi
         </div>
       )}
 
+=======
+>>>>>>> 0ddc1f9bb206cf4437ddaf25d840b99db713fd9a
       {/* Reminders */}
       <div className="px-4 pb-4">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 block">Reminders</span>
