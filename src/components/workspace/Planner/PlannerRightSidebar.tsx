@@ -9,18 +9,10 @@ import {
   CheckCircle2,
   PanelRightClose,
   PanelRightOpen,
-<<<<<<< HEAD
-  AlertTriangle,
-=======
->>>>>>> 0ddc1f9bb206cf4437ddaf25d840b99db713fd9a
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Reminder, SmartSuggestion } from "./PlannerTypes";
 import { DAYS } from "./PlannerTypes";
-<<<<<<< HEAD
-import { getFeedEvents, type FeedEvent } from "@/lib/eventLog";
-=======
->>>>>>> 0ddc1f9bb206cf4437ddaf25d840b99db713fd9a
 
 interface Props {
   isOpen: boolean;
@@ -43,24 +35,6 @@ const mockReminders: Reminder[] = [
 
 const PlannerRightSidebar = ({ isOpen, onToggle, currentDate, onDateSelect, visibleDays = [] }: Props) => {
   const [miniCalMonth, setMiniCalMonth] = useState(new Date(currentDate));
-<<<<<<< HEAD
-  const [overdueAlerts, setOverdueAlerts] = useState<FeedEvent[]>([]);
-
-  // Listen for overdue / completed events to show high-alert items
-  useEffect(() => {
-    const load = () => {
-      const events = getFeedEvents();
-      // Show tasks that were logged as overdue (or moved but originally overdue)
-      const overdue = events.filter(e => e.type === "task_overdue" || (e.type === "task_moved" && e.data.columnTo !== "done"));
-      setOverdueAlerts(overdue.slice(0, 5));
-    };
-    load();
-    const handler = () => load();
-    window.addEventListener("feed-event", handler);
-    return () => window.removeEventListener("feed-event", handler);
-  }, []);
-=======
->>>>>>> 0ddc1f9bb206cf4437ddaf25d840b99db713fd9a
 
   useEffect(() => {
     setMiniCalMonth(new Date(currentDate));
@@ -162,21 +136,15 @@ const PlannerRightSidebar = ({ isOpen, onToggle, currentDate, onDateSelect, visi
                   onClick={() => onDateSelect(date)}
                   className={cn(
                     "text-[11px] w-full h-7 flex items-center justify-center transition-colors relative z-10",
-                    // Apply rounded corners strictly to start/end of selection to form a block
                     (isSelectionStart || !isSelected) && "rounded-l-full",
                     (isSelectionEnd || !isSelected) && "rounded-r-full",
-                    // Not in month styling
                     !isCurrentMonth && !isSelected && "text-muted-foreground/40",
                     isCurrentMonth && !isSelected && "text-foreground hover:bg-muted/50",
-                    // Selected state: Gray block (if not strictly today-only)
                     isSelected && !isToday && "bg-muted text-foreground font-semibold hover:bg-muted/80",
-                    // Today + Selected: keeps the solid active block, but makes today font primary
                     isSelected && isToday && visibleDays.length > 1 && "bg-muted text-primary font-bold hover:bg-muted/80",
-                    // Today isolated logic 
                     isToday && (!isSelected || visibleDays.length <= 1) && "bg-primary text-primary-foreground font-bold"
                   )}
                 >
-                  {/* For isolated currently selected day that is not today, we can just use the gray block logic above */}
                   {date.getDate()}
                 </button>
               </div>
@@ -225,29 +193,6 @@ const PlannerRightSidebar = ({ isOpen, onToggle, currentDate, onDateSelect, visi
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* High Alerts — Overdue Tasks */}
-      {overdueAlerts.length > 0 && (
-        <div className="px-4 pb-4">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-            <span className="text-xs font-semibold uppercase tracking-wider text-destructive">High Alert</span>
-          </div>
-          <div className="space-y-2">
-            {overdueAlerts.map(evt => (
-              <div key={evt.id} className="rounded-lg p-3 bg-destructive/10 border border-destructive/20">
-                <p className="text-xs font-medium text-destructive truncate">{evt.data.taskTitle}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">
-                  {evt.data.milestone ?? "No milestone"} · {new Date(evt.timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-=======
->>>>>>> 0ddc1f9bb206cf4437ddaf25d840b99db713fd9a
       {/* Reminders */}
       <div className="px-4 pb-4">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 block">Reminders</span>
