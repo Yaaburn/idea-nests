@@ -97,6 +97,9 @@ const TopBar = ({ onOpenChat }: TopBarProps) => {
                 Cài đặt
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/auth")}>
+                Đăng nhập / Đăng ký
+              </DropdownMenuItem>
               <DropdownMenuItem>
                 Đăng xuất
               </DropdownMenuItem>

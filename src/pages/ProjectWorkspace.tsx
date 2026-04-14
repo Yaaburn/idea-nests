@@ -24,7 +24,7 @@ import TaskBoard from "@/components/workspace/TaskBoard";
 import DocumentStages from "@/components/workspace/DocumentStages";
 import Discussions from "@/components/workspace/Discussions";
 import Meetings from "@/components/workspace/Meetings";
-import Planner from "@/components/workspace/Planner";
+import Planner from "@/components/workspace/Planner/Planner";
 import TeamMembers from "@/components/workspace/TeamMembers";
 
 // Analysis - mount as-is

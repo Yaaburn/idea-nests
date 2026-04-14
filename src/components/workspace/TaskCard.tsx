@@ -28,7 +28,7 @@ const priorityColors = {
 
 const TaskCard = ({ task, onDragStart }: TaskCardProps) => {
   return (
-    <Card 
+    <Card
       className="p-4 cursor-grab active:cursor-grabbing hover:shadow-md transition-all group"
       draggable
       onDragStart={onDragStart}
