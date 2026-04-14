@@ -11,7 +11,8 @@ import {
   Calendar as CalendarIcon,
   Video, 
   Users,
-  Sparkles
+  Sparkles,
+  Database
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,8 +29,10 @@ import TeamMembers from "@/components/workspace/TeamMembers";
 
 // Analysis - mount as-is
 import ProjectAnalysisContent from "@/components/project-analysis/ProjectAnalysisContent";
+import IntegrationTab from "@/components/workspace/IntegrationTab";
+import { useProjectRole } from "@/hooks/useProjectRole";
 
-type WorkspaceSection = "tasks" | "documents" | "discussion" | "planner" | "meeting" | "team" | "analysis";
+type WorkspaceSection = "tasks" | "documents" | "discussion" | "planner" | "meeting" | "team" | "analysis" | "integration";
 
 interface SubItem {
   id: WorkspaceSection;
@@ -59,6 +62,7 @@ const getProjectData = (id: string) => ({
 const ProjectWorkspaceContent = () => {
   const { projectId, section } = useParams();
   const navigate = useNavigate();
+  const { isLeader } = useProjectRole(projectId);
   
   const [activeSection, setActiveSection] = useState<WorkspaceSection>(
     (section as WorkspaceSection) || "tasks"
@@ -84,10 +88,12 @@ const ProjectWorkspaceContent = () => {
   };
 
   const isAnalysis = activeSection === "analysis";
-  const isWorkspaceSection = !isAnalysis;
+  const isIntegration = activeSection === "integration";
+  const isWorkspaceSection = !isAnalysis && !isIntegration;
 
   const getSectionLabel = () => {
     if (isAnalysis) return "Analysis";
+    if (isIntegration) return "Tích hợp";
     return workspaceSubItems.find((item) => item.id === activeSection)?.label || "Tasks";
   };
 
@@ -169,6 +175,22 @@ const ProjectWorkspaceContent = () => {
             <Activity className={cn("h-5 w-5", isAnalysis && "text-purple-400")} />
             <span>Analysis</span>
           </button>
+
+          {/* Integration - Leader Only (completely invisible to non-leaders) */}
+          {isLeader && (
+            <button
+              onClick={() => handleSectionChange("integration")}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all",
+                "text-sidebar-foreground font-medium text-base",
+                "hover:bg-sidebar-accent/10",
+                isIntegration && "ring-2 ring-purple-400/50 bg-purple-500/10"
+              )}
+            >
+              <Database className={cn("h-5 w-5", isIntegration && "text-purple-400")} />
+              <span>Tích hợp</span>
+            </button>
+          )}
         </nav>
       </aside>
 
@@ -213,6 +235,9 @@ const ProjectWorkspaceContent = () => {
             {activeSection === "team" && <TeamMembers />}
             {activeSection === "analysis" && (
               <ProjectAnalysisContent projectId={projectId || "demo"} />
+            )}
+            {activeSection === "integration" && isLeader && (
+              <IntegrationTab projectId={projectId || "demo"} isLeader={isLeader} />
             )}
           </div>
         </main>

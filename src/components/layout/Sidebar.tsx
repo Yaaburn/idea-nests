@@ -7,6 +7,7 @@ import {
   Settings,
   BarChart3,
   Lock,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useRef, useCallback } from "react";

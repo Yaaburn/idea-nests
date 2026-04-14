@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
+
 import ProjectDetail from "./pages/ProjectDetail";
 import Browse from "./pages/Browse";
 import Dashboard from "./pages/Dashboard";
@@ -12,7 +14,6 @@ import CreateProject from "./pages/CreateProject";
 import Profile from "./pages/Profile";
 import InvestorRoom from "./pages/InvestorRoom";
 import Settings from "./pages/Settings";
-import IntegrationHub from "./pages/IntegrationHub";
 
 import Workspace from "./pages/Workspace";
 import People from "./pages/People";
@@ -38,7 +39,6 @@ const App = () => (
           <Route path="/profile/:id" element={<Profile />} />
           <Route path="/investor-room/:id" element={<InvestorRoom />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/integrations" element={<IntegrationHub />} />
           <Route path="/your-projects" element={<YourProjects />} />
           <Route path="/workspace/:projectId" element={<ProjectWorkspace />} />
           <Route path="/workspace/:projectId/:section" element={<ProjectWorkspace />} />
@@ -46,6 +46,9 @@ const App = () => (
           <Route path="/people" element={<People />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/project-analysis/:projectId" element={<ProjectAnalysis />} />
+          {/* Migration redirects for deleted pages */}
+          <Route path="/library" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/integrations" element={<Navigate to="/dashboard" replace />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

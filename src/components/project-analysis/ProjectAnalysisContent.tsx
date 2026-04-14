@@ -20,6 +20,7 @@ import {
   Calendar,
   Download,
   Share2,
+  Database,
 } from "lucide-react";
 
 // Import existing tab components - mounting them as-is
@@ -30,6 +31,7 @@ import { CapacityTab } from "./CapacityTab";
 import { CollaborationTab } from "./CollaborationTab";
 import { QualityRiskTab } from "./QualityRiskTab";
 import { GoalsOutcomesTab } from "./GoalsOutcomesTab";
+import { DataAnalysisTab } from "./DataAnalysisTab";
 
 interface ProjectAnalysisContentProps {
   projectId: string;
@@ -58,6 +60,7 @@ const ProjectAnalysisContent = ({ projectId }: ProjectAnalysisContentProps) => {
       { id: 'collaboration', label: 'Collaboration', icon: Users2, visible: true },
       { id: 'quality', label: 'Quality & Risk', icon: AlertTriangle, visible: viewMode === 'leader' },
       { id: 'goals', label: 'Goals', icon: Target, visible: true },
+      { id: 'data', label: 'Dữ liệu', icon: Database, visible: true },
     ];
     return allTabs.filter(tab => tab.visible);
   };
@@ -190,6 +193,10 @@ const ProjectAnalysisContent = ({ projectId }: ProjectAnalysisContentProps) => {
 
         <TabsContent value="goals" className="mt-6">
           <GoalsOutcomesTab />
+        </TabsContent>
+
+        <TabsContent value="data" className="mt-6">
+          <DataAnalysisTab projectId={projectId} />
         </TabsContent>
       </Tabs>
     </div>

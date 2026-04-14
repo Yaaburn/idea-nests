@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head><title>Google OAuth Callback</title></head>
+<body>
+<p>Đang xác thực... Cửa sổ này sẽ tự động đóng.</p>
+<script>
+  var hash = window.location.hash.substring(1);
+  var params = new URLSearchParams(hash);
+  var token = params.get('access_token');
+  var expiresIn = parseInt(params.get('expires_in') || '3600', 10);
+  if (token && window.opener) {
+    window.opener.postMessage({
+      type: 'GOOGLE_OAUTH_TOKEN',
+      access_token: token,
+      expires_at: Date.now() + expiresIn * 1000
+    }, window.location.origin);
+  }
+  window.close();
+</script>
+</body>
+</html>
