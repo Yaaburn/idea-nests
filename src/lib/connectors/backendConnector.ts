@@ -114,6 +114,163 @@ export async function uploadFile(projectId: string, file: File): Promise<RawShee
   return response.json();
 }
 
+// ─── Bot TalentNet Integration ───
+
+export interface BotConnectResponse {
+  success: boolean;
+  message: string;
+  integration: {
+    id: string;
+    projectId: string;
+    sheetTitle: string;
+    spreadsheetId: string;
+    botEmail: string;
+    syncMode: 'manual' | 'auto';
+    syncInterval: number;
+    lastSyncedAt: string | null;
+    status: string;
+  };
+  sync: {
+    success: boolean;
+    rowCount: number;
+    message: string;
+  };
+}
+
+export interface BotStatusResponse {
+  connected: boolean;
+  integration?: {
+    id: string;
+    projectId: string;
+    sheetTitle: string;
+    sheetUrl: string;
+    spreadsheetId: string;
+    botEmail: string;
+    syncMode: 'manual' | 'auto';
+    syncInterval: number;
+    lastSyncedAt: string | null;
+    status: string;
+    errorMessage: string;
+  };
+  dataSnapshot?: {
+    rowCount: number;
+    headers: string[];
+    syncedAt: string;
+  } | null;
+}
+
+/**
+ * Connect a Google Sheet to a project via Bot TalentNet.
+ */
+export async function connectBot(projectId: string, sheetUrl: string): Promise<BotConnectResponse> {
+  const response = await fetch(`${BACKEND_URL}/api/integrations/bot/connect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ projectId, sheetUrl }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      error: 'UNKNOWN',
+      message: 'Lỗi kết nối Bot.',
+    }));
+    const err = new Error(error.message);
+    (err as any).code = error.error;
+    throw err;
+  }
+
+  return response.json();
+}
+
+/**
+ * Update sync settings for a bot integration.
+ */
+export async function updateBotSettings(
+  integrationId: string,
+  syncMode: 'manual' | 'auto',
+  syncInterval: number
+): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${BACKEND_URL}/api/integrations/bot/settings/${integrationId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ syncMode, syncInterval }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      error: 'UNKNOWN',
+      message: 'Lỗi cập nhật cài đặt.',
+    }));
+    throw new Error(error.message);
+  }
+
+  return response.json();
+}
+
+/**
+ * Manually trigger a sync for a bot integration.
+ */
+export async function syncBot(integrationId: string): Promise<{
+  success: boolean;
+  message: string;
+  rowCount: number;
+  lastSyncedAt: string | null;
+  status: string;
+}> {
+  const response = await fetch(`${BACKEND_URL}/api/integrations/bot/sync/${integrationId}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      error: 'UNKNOWN',
+      message: 'Lỗi đồng bộ.',
+    }));
+    const err = new Error(error.message);
+    (err as any).code = error.error;
+    throw err;
+  }
+
+  return response.json();
+}
+
+/**
+ * Disconnect a bot integration and remove all associated data.
+ */
+export async function disconnectBot(integrationId: string): Promise<{ success: boolean; message: string }> {
+  const response = await fetch(`${BACKEND_URL}/api/integrations/bot/${integrationId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      error: 'UNKNOWN',
+      message: 'Lỗi ngắt kết nối.',
+    }));
+    throw new Error(error.message);
+  }
+
+  return response.json();
+}
+
+/**
+ * Get bot integration status for a project.
+ */
+export async function getBotStatus(projectId: string): Promise<BotStatusResponse> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/integrations/bot/status/${projectId}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) {
+      return { connected: false };
+    }
+    return response.json();
+  } catch {
+    return { connected: false };
+  }
+}
+
 // ─── Backend Health ───
 
 export async function checkBackendHealth(): Promise<boolean> {

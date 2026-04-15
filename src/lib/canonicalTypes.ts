@@ -226,13 +226,19 @@ export type ConnectorMode = "google_oauth" | "service_account" | "csv_upload";
 export interface ProjectIntegrationConfig {
   project_id: string;
   sheet_url: string;
+  sheet_title?: string;            // display name of the sheet
   provider: "google_sheets" | "csv_upload";  // extensible union
   connector_mode: ConnectorMode;
   sync_interval: number;          // minutes
+  sync_mode?: "manual" | "auto";  // manual or auto sync
+  sync_frequency?: number;        // minutes: 15, 60, 720, 1440
   column_overrides: ColumnMapping[];
   configured_by: string;
   configured_at: string;
   csv_filename?: string;           // only for csv_upload mode
   last_connected_at?: string;      // ISO 8601
+  last_synced_at?: string;         // ISO 8601
   last_disconnected_at?: string;   // ISO 8601
+  status?: "active" | "error";     // connection health
+  status_message?: string;         // error details
 }

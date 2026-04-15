@@ -10,6 +10,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   Upload,
   Bot,
@@ -28,6 +42,11 @@ import {
   FileUp,
   Settings2,
   Lock,
+  Copy,
+  Clock,
+  Unplug,
+  Save,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -45,6 +64,11 @@ import {
   getBotInfo,
   checkBackendHealth,
   checkGoogleOAuthConfig,
+  connectBot,
+  syncBot,
+  updateBotSettings,
+  disconnectBot,
+  getBotStatus,
 } from "@/lib/connectors/backendConnector";
 import { CONNECTOR_MODES, type ConnectorMode } from "@/lib/connectors/types";
 import { validateSheetUrl } from "@/lib/ingestion/mockDataGenerator";
@@ -166,6 +190,12 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Bot dashboard sync settings
+  const [syncMode, setSyncMode] = useState<"manual" | "auto">("manual");
+  const [syncFrequency, setSyncFrequency] = useState<string>("60");
+  // Bot integration ID from MongoDB (used for API calls)
+  const [botIntegrationId, setBotIntegrationId] = useState<string | null>(null);
+
   // ─── Init: check existing config + backend health ───
 
   useEffect(() => {
@@ -173,6 +203,8 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
     if (existing) {
       setSheetUrl(existing.sheet_url || "");
       setSelectedMode(existing.connector_mode);
+      setSyncMode(existing.sync_mode || "manual");
+      setSyncFrequency(String(existing.sync_frequency || 60));
       setStep("connected");
     }
 
@@ -181,6 +213,37 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
       if (healthy) {
         checkGoogleOAuthConfig().then(setGoogleConfigured);
         getBotInfo().then(setBotInfo).catch(() => setBotInfo({ email: "", configured: false }));
+
+        // Check if there's an existing bot integration in MongoDB
+        getBotStatus(projectId).then((status) => {
+          if (status.connected && status.integration) {
+            setBotIntegrationId(status.integration.id);
+            setSheetUrl(status.integration.sheetUrl || "");
+            setSelectedMode("service_account");
+            setSyncMode(status.integration.syncMode || "manual");
+            setSyncFrequency(String(status.integration.syncInterval || 60));
+
+            // Sync localStorage with MongoDB state
+            saveIntegrationConfig({
+              project_id: projectId,
+              sheet_url: status.integration.sheetUrl,
+              sheet_title: status.integration.sheetTitle,
+              provider: "google_sheets",
+              connector_mode: "service_account",
+              sync_interval: status.integration.syncInterval,
+              sync_mode: status.integration.syncMode,
+              sync_frequency: status.integration.syncInterval,
+              column_overrides: [],
+              configured_by: "current_user",
+              configured_at: new Date().toISOString(),
+              last_connected_at: new Date().toISOString(),
+              last_synced_at: status.integration.lastSyncedAt || undefined,
+              status: status.integration.status === "error" ? "error" : "active",
+              status_message: status.integration.errorMessage || undefined,
+            });
+            setStep("connected");
+          }
+        });
       } else {
         setGoogleConfigured(false);
         setBotInfo({ email: "", configured: false });
@@ -338,6 +401,34 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
     setStep("loading");
 
     try {
+      // Bot mode: use the new connectBot API
+      if (selectedMode === "service_account") {
+        const response = await connectBot(projectId, sheetUrl);
+        setBotIntegrationId(response.integration.id);
+
+        saveIntegrationConfig({
+          project_id: projectId,
+          sheet_url: sheetUrl,
+          sheet_title: response.integration.sheetTitle,
+          provider: "google_sheets",
+          connector_mode: "service_account",
+          sync_interval: response.integration.syncInterval,
+          sync_mode: response.integration.syncMode,
+          sync_frequency: response.integration.syncInterval,
+          column_overrides: [],
+          configured_by: "current_user",
+          configured_at: new Date().toISOString(),
+          last_connected_at: new Date().toISOString(),
+          last_synced_at: response.integration.lastSyncedAt || new Date().toISOString(),
+          status: "active",
+        });
+
+        setStep("connected");
+        toast.success(`Kết nối thành công! ${response.sync.rowCount} hàng dữ liệu đã được đồng bộ.`);
+        return;
+      }
+
+      // OAuth mode: existing flow
       const rawData = await fetchSheetData(projectId, sheetUrl);
       const data = await runIngestionPipeline(projectId, { rawData });
       setResult(data);
@@ -346,13 +437,17 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
       saveIntegrationConfig({
         project_id: projectId,
         sheet_url: sheetUrl,
+        sheet_title: rawData.title || "Google Sheet",
         provider: "google_sheets",
         connector_mode: selectedMode,
         sync_interval: 0,
+        sync_mode: "manual",
         column_overrides: [],
         configured_by: "current_user",
         configured_at: new Date().toISOString(),
         last_connected_at: new Date().toISOString(),
+        last_synced_at: new Date().toISOString(),
+        status: "active",
       });
     } catch (err: any) {
       if (err.code === "AUTH_REQUIRED") {
@@ -361,6 +456,8 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
         setError("Không có quyền truy cập sheet này. Hãy kiểm tra quyền chia sẻ.");
       } else if (err.code === "SHEET_NOT_FOUND") {
         setError("Không tìm thấy Google Sheet. Hãy kiểm tra lại URL.");
+      } else if (err.code === "ALREADY_CONNECTED") {
+        setError("Project này đã có kết nối. Hãy ngắt kết nối trước.");
       } else {
         setError(err instanceof Error ? err.message : "Không thể lấy dữ liệu.");
       }
@@ -371,14 +468,36 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
   };
 
   const handleConfirmAndSave = () => {
+    // Update config with sync settings
+    const config = getIntegrationConfig(projectId);
+    if (config) {
+      saveIntegrationConfig({
+        ...config,
+        sync_mode: syncMode,
+        sync_frequency: parseInt(syncFrequency),
+        last_synced_at: new Date().toISOString(),
+        status: "active",
+      });
+    }
     setStep("connected");
     toast.success("Đã lưu cấu hình tích hợp!");
   };
 
   const handleDisconnect = async () => {
     if (selectedMode === "google_oauth") {
-      await revokeAuth(projectId).catch(() => {});
+      await revokeAuth(projectId).catch(() => { });
     }
+
+    // Bot mode: call backend to disconnect and clean up MongoDB
+    if (botIntegrationId) {
+      try {
+        await disconnectBot(botIntegrationId);
+      } catch (err) {
+        console.error("Failed to disconnect bot:", err);
+      }
+      setBotIntegrationId(null);
+    }
+
     removeIntegrationConfig(projectId);
     setStep("select_mode");
     setSelectedMode(null);
@@ -386,6 +505,8 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
     setResult(null);
     setError(null);
     setSelectedFile(null);
+    setSyncMode("manual");
+    setSyncFrequency("60");
     toast("Đã ngắt kết nối.");
   };
 
@@ -401,12 +522,47 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
     setIsLoading(true);
     setError(null);
     try {
+      // Bot mode: use syncBot API
+      if (config.connector_mode === "service_account" && botIntegrationId) {
+        const result = await syncBot(botIntegrationId);
+        if (result.success) {
+          saveIntegrationConfig({
+            ...config,
+            last_synced_at: result.lastSyncedAt || new Date().toISOString(),
+            status: "active",
+            status_message: undefined,
+          });
+          toast.success(`Đã đồng bộ dữ liệu thành công! (${result.rowCount} hàng)`);
+        } else {
+          setError(result.message);
+          saveIntegrationConfig({
+            ...config,
+            status: "error",
+            status_message: result.message,
+          });
+        }
+        return;
+      }
+
+      // OAuth mode: existing flow
       const rawData = await fetchSheetData(projectId, config.sheet_url);
       const data = await runIngestionPipeline(projectId, { rawData });
       setResult(data);
-      toast.success("Đã cập nhật dữ liệu!");
+      saveIntegrationConfig({
+        ...config,
+        last_synced_at: new Date().toISOString(),
+        status: "active",
+      });
+      toast.success("Đã đồng bộ dữ liệu thành công!");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Lỗi cập nhật.");
+      setError(err instanceof Error ? err.message : "Lỗi đồng bộ.");
+      if (config) {
+        saveIntegrationConfig({
+          ...config,
+          status: "error",
+          status_message: err instanceof Error ? err.message : "Unknown error",
+        });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -673,90 +829,114 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
           </div>
         )}
 
-        {/* ─── BOT MODE: Blocked state ─── */}
-        {selectedMode === "service_account" && !botInfo?.configured && (
+        {/* ─── BOT MODE: Setup (Not connected) ─── */}
+        {selectedMode === "service_account" && (
           <div className="space-y-4">
-            <Card className="p-4 space-y-3 border-amber-300/50">
-              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-                <Bot className="w-5 h-5" />
-                <h3 className="font-medium">Bot TalentNet chưa được cấu hình</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Chế độ Bot yêu cầu một Google Service Account. Admin hệ thống cần thiết lập trước khi sử dụng.
-              </p>
-
-              <button
-                onClick={() => setShowSetupHelp(!showSetupHelp)}
-                className="flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                {showSetupHelp ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                Hướng dẫn cấu hình (dành cho admin)
-              </button>
-
-              {showSetupHelp && (
-                <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg space-y-2">
-                  <p className="font-medium text-foreground">Thiếu: GOOGLE_SERVICE_ACCOUNT_EMAIL</p>
-                  <ol className="list-decimal list-inside space-y-1.5">
-                    <li>Vào <strong>Google Cloud Console</strong> → IAM → Service Accounts</li>
-                    <li>Tạo Service Account mới</li>
-                    <li>Thêm email vào file <code className="bg-black/10 dark:bg-white/10 px-1 rounded">.env</code>:</li>
-                  </ol>
-                  <div className="bg-black/5 dark:bg-white/5 p-2 rounded font-mono text-[11px]">
-                    GOOGLE_SERVICE_ACCOUNT_EMAIL=bot@project.iam.gserviceaccount.com
-                  </div>
-                  <p>Restart backend sau khi cấu hình.</p>
+            {/* Admin setup guide (collapsible) - shown when bot not configured */}
+            {!botInfo?.configured && (
+              <Card className="p-4 space-y-3 border-amber-300/50">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                  <Bot className="w-5 h-5" />
+                  <h3 className="font-medium">Bot TalentNet chưa được cấu hình</h3>
                 </div>
+                <p className="text-sm text-muted-foreground">
+                  Chế độ Bot yêu cầu một Google Service Account. Admin hệ thống cần thiết lập trước khi sử dụng.
+                </p>
+
+                <button
+                  onClick={() => setShowSetupHelp(!showSetupHelp)}
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  {showSetupHelp ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  Hướng dẫn cấu hình (dành cho admin)
+                </button>
+
+                {showSetupHelp && (
+                  <div className="text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg space-y-2">
+                    <p className="font-medium text-foreground">Thiếu: GOOGLE_SERVICE_ACCOUNT_EMAIL</p>
+                    <ol className="list-decimal list-inside space-y-1.5">
+                      <li>Vào <strong>Google Cloud Console</strong> → IAM → Service Accounts</li>
+                      <li>Tạo Service Account mới</li>
+                      <li>Thêm email vào file <code className="bg-black/10 dark:bg-white/10 px-1 rounded">.env</code>:</li>
+                    </ol>
+                    <div className="bg-black/5 dark:bg-white/5 p-2 rounded font-mono text-[11px]">
+                      GOOGLE_SERVICE_ACCOUNT_EMAIL=bot-data-sync@sonorous-cacao-493410-m9.iam.gserviceaccount.com
+                    </div>
+                    <p>Restart backend sau khi cấu hình.</p>
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {/* Copy Bot Email - shown when bot IS configured */}
+            {botInfo?.configured && (
+              <Card className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Bot className="w-5 h-5 text-primary" />
+                  <h3 className="font-medium">Bước 1: Chia sẻ Sheet cho Bot</h3>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Copy email của Bot bên dưới, mở Google Sheet → Chia sẻ → Thêm email với quyền <strong>Người xem</strong> (Viewer).
+                </p>
+                <div className="flex items-center gap-2 p-2.5 bg-muted/50 rounded-lg border border-border/50">
+                  <code className="text-xs font-mono flex-1 break-all text-foreground">{botInfo.email}</code>
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => { navigator.clipboard.writeText(botInfo.email); toast.success("Đã copy email Bot!"); }}
+                    className="text-xs h-8 gap-1.5 shrink-0"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    Copy Bot Email
+                  </Button>
+                </div>
+              </Card>
+            )}
+
+            {/* Sheet URL Input */}
+            <Card className="p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5 text-primary" />
+                <h3 className="font-medium">{botInfo?.configured ? "Bước 2: Nhập link Google Sheet" : "Link Google Sheet"}</h3>
+              </div>
+              <div className="relative">
+                <Input
+                  value={sheetUrl}
+                  onChange={e => setSheetUrl(e.target.value)}
+                  placeholder="https://docs.google.com/spreadsheets/d/..."
+                  className="pr-10"
+                  disabled={!botInfo?.configured}
+                />
+                {sheetUrl && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {urlValid
+                      ? <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      : <AlertCircle className="w-4 h-4 text-red-400" />
+                    }
+                  </div>
+                )}
+              </div>
+              {sheetUrl && !urlValid && (
+                <p className="text-xs text-red-500">URL không hợp lệ. Cần có dạng: https://docs.google.com/spreadsheets/d/...</p>
+              )}
+              {!botInfo?.configured && (
+                <p className="text-xs text-muted-foreground">Cần cấu hình Bot trước khi nhập URL.</p>
               )}
             </Card>
 
+            {/* Connect & Fetch button */}
+            <Button
+              onClick={handleFetchSheet}
+              disabled={!urlValid || isLoading || !botInfo?.configured}
+              className="w-full h-11 text-sm font-medium gap-2"
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              Kết nối & Lấy dữ liệu lần đầu
+            </Button>
+
+            {/* CSV fallback */}
             <p className="text-xs text-muted-foreground text-center">
               Hoặc sử dụng chế độ <button onClick={() => handleSelectMode("csv_upload")} className="text-primary hover:underline">Tải lên CSV/Excel</button> — không cần cấu hình thêm.
             </p>
-          </div>
-        )}
-
-        {/* ─── BOT MODE: Configured — Instructions + URL ─── */}
-        {selectedMode === "service_account" && botInfo?.configured && (
-          <div className="space-y-4">
-            <Card className="p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Bot className="w-5 h-5 text-primary" />
-                <h3 className="font-medium">Hướng dẫn chia sẻ cho Bot</h3>
-              </div>
-              <ol className="text-sm text-muted-foreground space-y-2 list-decimal list-inside">
-                <li>Mở Google Sheet của bạn</li>
-                <li>Nhấn <strong>Chia sẻ</strong> (Share)</li>
-                <li>Thêm email bot dưới đây với quyền <strong>Người xem</strong> (Viewer)</li>
-                <li>Nhập URL sheet vào ô bên dưới</li>
-              </ol>
-              <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                <code className="text-xs font-mono flex-1 break-all">{botInfo.email}</code>
-                <Button
-                  variant="ghost" size="sm"
-                  onClick={() => { navigator.clipboard.writeText(botInfo.email); toast.success("Đã copy!"); }}
-                  className="text-xs h-7"
-                >
-                  Copy
-                </Button>
-              </div>
-            </Card>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">URL Google Sheet</label>
-              <Input
-                value={sheetUrl}
-                onChange={e => setSheetUrl(e.target.value)}
-                placeholder="https://docs.google.com/spreadsheets/d/..."
-              />
-              {sheetUrl && !urlValid && (
-                <p className="text-xs text-red-500">URL không hợp lệ.</p>
-              )}
-            </div>
-
-            <Button onClick={handleFetchSheet} disabled={!urlValid || isLoading} className="w-full">
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Database className="w-4 h-4 mr-2" />}
-              Xác minh quyền truy cập & Phân tích
-            </Button>
           </div>
         )}
 
@@ -981,20 +1161,36 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
     }
 
     const modeInfo = CONNECTOR_MODES.find(m => m.id === config.connector_mode);
+    const isBot = config.connector_mode === "service_account";
+    const isCsv = config.connector_mode === "csv_upload";
+    const connStatus = config.status || "active";
+    const sheetName = config.sheet_title || (isCsv ? config.csv_filename : "Google Sheet") || "Không rõ";
+
+    const handleSaveSyncSettings = async () => {
+      // Save to MongoDB via API if bot mode
+      if (botIntegrationId) {
+        try {
+          await updateBotSettings(botIntegrationId, syncMode, parseInt(syncFrequency));
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Lỗi lưu cài đặt.");
+          return;
+        }
+      }
+
+      // Also save to localStorage for UI state
+      saveIntegrationConfig({
+        ...config,
+        sync_mode: syncMode,
+        sync_frequency: parseInt(syncFrequency),
+      });
+      toast.success("Đã lưu cài đặt đồng bộ!");
+    };
 
     return (
       <div className="max-w-2xl mx-auto p-6 space-y-5">
+        {/* Header */}
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-foreground">Tích hợp dữ liệu</h2>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
-              <RefreshCw className={cn("w-3 h-3 mr-1", isLoading && "animate-spin")} />
-              Cập nhật
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleDisconnect} className="text-red-500 hover:text-red-600">
-              <LogOut className="w-3 h-3 mr-1" /> Ngắt kết nối
-            </Button>
-          </div>
+          <h2 className="text-lg font-semibold text-foreground">Quản lý nguồn dữ liệu</h2>
         </div>
 
         {error && (
@@ -1004,25 +1200,130 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
           </div>
         )}
 
-        <Card className="p-4 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{modeInfo?.icon ?? "📊"}</span>
-            <div>
-              <p className="font-medium text-sm">{modeInfo?.label_vi ?? config.connector_mode}</p>
-              <p className="text-xs text-muted-foreground">
-                {config.connector_mode === "csv_upload"
-                  ? `File: ${config.csv_filename ?? "không rõ"}`
-                  : config.sheet_url
-                }
-              </p>
+        {/* ─── Info Card: Sheet name, Status, Last synced ─── */}
+        <Card className="p-5 space-y-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <span className="text-xl">{modeInfo?.icon ?? "📊"}</span>
+              </div>
+              <div>
+                <p className="font-semibold text-sm text-foreground">{sheetName}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {modeInfo?.label_vi ?? config.connector_mode}
+                </p>
+              </div>
             </div>
-            <Badge variant="default" className="ml-auto text-xs">Đã kết nối</Badge>
+            <Badge
+              variant={connStatus === "active" ? "default" : "destructive"}
+              className="text-xs"
+            >
+              {connStatus === "active" ? "Đang hoạt động" : "Lỗi"}
+            </Badge>
           </div>
-          <p className="text-xs text-muted-foreground">
-            Kết nối lúc: {config.last_connected_at ? new Date(config.last_connected_at).toLocaleString("vi-VN") : config.configured_at}
-          </p>
+
+          <div className="flex items-center gap-4 pt-2 border-t border-border/50">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="w-3.5 h-3.5" />
+              <span>Lần đồng bộ cuối:</span>
+              <span className="font-medium text-foreground">
+                {config.last_synced_at
+                  ? new Date(config.last_synced_at).toLocaleString("vi-VN", {
+                    day: "2-digit", month: "2-digit", year: "numeric",
+                    hour: "2-digit", minute: "2-digit",
+                  })
+                  : config.last_connected_at
+                    ? new Date(config.last_connected_at).toLocaleString("vi-VN")
+                    : "Chưa đồng bộ"
+                }
+              </span>
+            </div>
+          </div>
+
+          {connStatus === "error" && config.status_message && (
+            <div className="flex items-start gap-2 p-2 rounded bg-red-500/10 text-red-600 dark:text-red-400 text-xs">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <p>{config.status_message}</p>
+            </div>
+          )}
         </Card>
 
+        {/* ─── Sync Now Button ─── */}
+        <Button
+          onClick={handleRefresh}
+          disabled={isLoading || isCsv}
+          className="w-full h-11 text-sm font-medium gap-2"
+        >
+          {isLoading
+            ? <Loader2 className="w-4 h-4 animate-spin" />
+            : <RefreshCw className="w-4 h-4" />
+          }
+          Đồng bộ Ngay
+        </Button>
+        {isCsv && (
+          <p className="text-xs text-muted-foreground text-center -mt-2">
+            Chế độ CSV/Excel cần tải lại file để cập nhật dữ liệu.
+          </p>
+        )}
+
+        {/* ─── Sync Settings (only for Google Sheets modes) ─── */}
+        {!isCsv && (
+          <Card className="p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <Settings2 className="w-4 h-4 text-primary" />
+              <h3 className="font-medium text-sm">Cài đặt Đồng bộ</h3>
+            </div>
+
+            <RadioGroup
+              value={syncMode}
+              onValueChange={(v) => setSyncMode(v as "manual" | "auto")}
+              className="space-y-3"
+            >
+              <div className="flex items-center space-x-3">
+                <RadioGroupItem value="manual" id="sync-manual" />
+                <Label htmlFor="sync-manual" className="text-sm cursor-pointer">
+                  Đồng bộ thủ công (Manual)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-3">
+                <RadioGroupItem value="auto" id="sync-auto" />
+                <Label htmlFor="sync-auto" className="text-sm cursor-pointer">
+                  Tự động đồng bộ (Auto)
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {/* Frequency dropdown - only shown when auto */}
+            {syncMode === "auto" && (
+              <div className="space-y-2 pl-7">
+                <Label className="text-xs text-muted-foreground">Tần suất đồng bộ</Label>
+                <Select value={syncFrequency} onValueChange={setSyncFrequency}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">Mỗi 15 phút</SelectItem>
+                    <SelectItem value="60">Mỗi 1 giờ</SelectItem>
+                    <SelectItem value="720">Mỗi 12 giờ</SelectItem>
+                    <SelectItem value="1440">Mỗi 1 ngày</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSaveSyncSettings}
+              className="gap-1.5"
+            >
+              <Save className="w-3.5 h-3.5" />
+              Lưu Cài đặt
+            </Button>
+          </Card>
+        )}
+
+        {/* ─── Analysis Results (if available) ─── */}
         {result && (
           <Card className="p-4 space-y-2">
             <h3 className="text-sm font-medium">Phân tích gần nhất</h3>
@@ -1042,6 +1343,41 @@ const IntegrationTab = ({ projectId, isLeader }: IntegrationTabProps) => {
             </div>
           </Card>
         )}
+
+        {/* ─── Disconnect ─── */}
+        <div className="pt-3 border-t border-border/50">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5 w-full justify-center"
+              >
+                <Unplug className="w-4 h-4" />
+                Ngắt kết nối nguồn dữ liệu
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Xác nhận ngắt kết nối</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Bạn có chắc chắn muốn ngắt kết nối? Toàn bộ dữ liệu của Sheet
+                  này đang lưu trên hệ thống sẽ bị xóa bỏ. Hành động này không
+                  thể hoàn tác.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Hủy</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDisconnect}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Xác nhận ngắt kết nối
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
     );
   }
