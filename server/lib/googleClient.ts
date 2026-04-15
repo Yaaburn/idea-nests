@@ -189,8 +189,9 @@ export function getServiceAccountInfo(): {
   configured: boolean;
 } {
   const email = getServiceAccountEmail();
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
   return {
     email,
-    configured: email.length > 0 && email.includes('@'),
+    configured: email.length > 0 && email.includes('@') && privateKey.length > 0,
   };
 }
