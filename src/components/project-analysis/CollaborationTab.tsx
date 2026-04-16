@@ -1,8 +1,8 @@
 import { KPICard } from "./KPICard";
-import { 
-  Users, 
-  MessageSquare, 
-  Clock, 
+import {
+  Users,
+  MessageSquare,
+  Clock,
   GitPullRequest,
   ExternalLink,
   Target,
@@ -13,83 +13,65 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-} from "recharts";
+import NetworkCanvas from "./collaboration/NetworkCanvas";
+import ContributionChart from "./collaboration/ContributionChart";
 
-// Mock contribution over time data
-const contributionData = [
-  { week: "W1", code: 15, design: 8, docs: 5, demo: 2 },
-  { week: "W2", code: 18, design: 10, docs: 6, demo: 3 },
-  { week: "W3", code: 22, design: 7, docs: 8, demo: 1 },
-  { week: "W4", code: 20, design: 12, docs: 4, demo: 4 },
-  { week: "W5", code: 25, design: 9, docs: 7, demo: 2 },
-  { week: "W6", code: 28, design: 11, docs: 6, demo: 5 },
-];
-
-// Mock top contributors
+// Top contributors – synced with Workspace › Team Members
 const topContributors = [
   {
     id: "1",
-    name: "Alex Chen",
-    role: "Tech Lead",
-    avatar: "",
+    name: "Sarah Chen",
+    role: "Founder & Lead",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150",
     contributions: 156,
     milestones: 8,
     reliability: 95,
     evidenceLinks: ["PR #142", "PR #138", "Design Review #23"],
-    responsibilities: "Architecture, code review, team mentoring",
+    responsibilities: "Product strategy, architecture, team mentoring",
   },
   {
     id: "2",
-    name: "Sarah Kim",
-    role: "Full-Stack Dev",
-    avatar: "",
+    name: "Alex Kim",
+    role: "Lead Developer",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
     contributions: 124,
     milestones: 6,
     reliability: 92,
     evidenceLinks: ["PR #140", "PR #135", "API Docs"],
-    responsibilities: "Backend development, API design, database",
+    responsibilities: "TypeScript, Node.js, firmware development",
   },
   {
     id: "3",
-    name: "Emma Davis",
-    role: "UI/UX Designer",
-    avatar: "",
-    contributions: 89,
+    name: "Maria Lopez",
+    role: "UX Designer",
+    avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150",
+    contributions: 98,
     milestones: 5,
-    reliability: 98,
+    reliability: 88,
     evidenceLinks: ["Figma v3.2", "User Test Report", "Design System"],
     responsibilities: "UI design, user research, prototyping",
   },
   {
     id: "4",
-    name: "Mike Johnson",
-    role: "Backend Dev",
-    avatar: "",
-    contributions: 98,
+    name: "James Wilson",
+    role: "Backend Developer",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
+    contributions: 89,
     milestones: 5,
-    reliability: 88,
+    reliability: 98,
     evidenceLinks: ["PR #137", "PR #132", "Migration Script"],
-    responsibilities: "Database optimization, DevOps, infrastructure",
+    responsibilities: "Python, PostgreSQL, Docker, infrastructure",
   },
   {
     id: "5",
-    name: "Tom Wilson",
-    role: "Frontend Dev",
-    avatar: "",
+    name: "Emily Watson",
+    role: "Marketing Lead",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
     contributions: 76,
     milestones: 4,
     reliability: 91,
-    evidenceLinks: ["PR #141", "PR #136", "Component Library"],
-    responsibilities: "React development, state management, testing",
+    evidenceLinks: ["PR #141", "Content Strategy", "SEO Report"],
+    responsibilities: "Content strategy, SEO, social media",
   },
 ];
 
@@ -133,25 +115,6 @@ const collaborationKpis = [
   },
 ];
 
-// Mock network graph data (simplified for display)
-const networkNodes = [
-  { id: "Alex", role: "Lead", x: 50, y: 50 },
-  { id: "Sarah", role: "Dev", x: 80, y: 30 },
-  { id: "Mike", role: "Dev", x: 80, y: 70 },
-  { id: "Emma", role: "Design", x: 20, y: 30 },
-  { id: "Tom", role: "Dev", x: 20, y: 70 },
-];
-
-const networkEdges = [
-  { from: "Alex", to: "Sarah", strength: 25 },
-  { from: "Alex", to: "Mike", strength: 20 },
-  { from: "Alex", to: "Emma", strength: 15 },
-  { from: "Alex", to: "Tom", strength: 18 },
-  { from: "Sarah", to: "Mike", strength: 12 },
-  { from: "Sarah", to: "Tom", strength: 8 },
-  { from: "Emma", to: "Tom", strength: 6 },
-];
-
 export const CollaborationTab = () => {
   return (
     <div className="space-y-6">
@@ -162,122 +125,18 @@ export const CollaborationTab = () => {
         ))}
       </div>
 
-      {/* Contribution Over Time */}
-      <div className="bg-card rounded-xl border border-border p-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-semibold text-foreground">Contribution by Type</h3>
-          <p className="text-sm text-muted-foreground">Weekly contribution breakdown by artifact type</p>
-        </div>
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={contributionData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis 
-                dataKey="week"
-                tick={{ fill: "hsl(var(--muted-foreground))" }}
-              />
-              <YAxis tick={{ fill: "hsl(var(--muted-foreground))" }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                }}
-              />
-              <Legend />
-              <Area
-                type="monotone"
-                dataKey="code"
-                stackId="1"
-                stroke="hsl(217, 91%, 60%)"
-                fill="hsl(217, 91%, 60%)"
-                fillOpacity={0.8}
-                name="Code"
-              />
-              <Area
-                type="monotone"
-                dataKey="design"
-                stackId="1"
-                stroke="hsl(330, 81%, 60%)"
-                fill="hsl(330, 81%, 60%)"
-                fillOpacity={0.8}
-                name="Design"
-              />
-              <Area
-                type="monotone"
-                dataKey="docs"
-                stackId="1"
-                stroke="hsl(25, 95%, 53%)"
-                fill="hsl(25, 95%, 53%)"
-                fillOpacity={0.8}
-                name="Docs"
-              />
-              <Area
-                type="monotone"
-                dataKey="demo"
-                stackId="1"
-                stroke="hsl(0, 72%, 51%)"
-                fill="hsl(0, 72%, 51%)"
-                fillOpacity={0.8}
-                name="Demo"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      {/* Contribution Over Time – Enhanced Chart */}
+      <ContributionChart />
 
-      {/* Collaboration Network (Simplified) */}
-      <div className="bg-card rounded-xl border border-border p-6">
-        <div className="mb-4">
+      {/* Collaboration Network - Interactive Canvas */}
+      <div>
+        <div className="mb-3">
           <h3 className="text-lg font-semibold text-foreground">Collaboration Network</h3>
-          <p className="text-sm text-muted-foreground">Who interacts with whom through reviews and feedback</p>
+          <p className="text-sm text-muted-foreground">
+            Click a member to focus their connections. Click an edge to see AI-powered interaction summary. Use the task filter to scope by work context.
+          </p>
         </div>
-        
-        <div className="relative h-[250px] bg-muted/30 rounded-lg">
-          <svg width="100%" height="100%" viewBox="0 0 100 100" className="overflow-visible">
-            {/* Edges */}
-            {networkEdges.map((edge, i) => {
-              const from = networkNodes.find(n => n.id === edge.from)!;
-              const to = networkNodes.find(n => n.id === edge.to)!;
-              return (
-                <line
-                  key={i}
-                  x1={from.x}
-                  y1={from.y}
-                  x2={to.x}
-                  y2={to.y}
-                  stroke="hsl(var(--primary))"
-                  strokeWidth={edge.strength / 10}
-                  strokeOpacity={0.3}
-                />
-              );
-            })}
-            {/* Nodes */}
-            {networkNodes.map((node) => (
-              <g key={node.id}>
-                <circle
-                  cx={node.x}
-                  cy={node.y}
-                  r={6}
-                  fill="hsl(var(--primary))"
-                  className="transition-all hover:r-8"
-                />
-                <text
-                  x={node.x}
-                  y={node.y + 12}
-                  textAnchor="middle"
-                  className="text-[3px] fill-foreground"
-                >
-                  {node.id}
-                </text>
-              </g>
-            ))}
-          </svg>
-        </div>
-        
-        <p className="text-xs text-muted-foreground mt-4">
-          Line thickness represents interaction frequency. Hover over nodes to see details.
-        </p>
+        <NetworkCanvas />
       </div>
 
       {/* Top Contributors Leaderboard */}
@@ -294,7 +153,7 @@ export const CollaborationTab = () => {
 
         <div className="space-y-4">
           {topContributors.map((contributor, index) => (
-            <div 
+            <div
               key={contributor.id}
               className="bg-muted/30 rounded-lg p-4 border border-border/50"
             >
@@ -313,48 +172,54 @@ export const CollaborationTab = () => {
                   <div className="flex items-center gap-3 mb-2">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={contributor.avatar} />
-                      <AvatarFallback>
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary">
                         {contributor.name.split(" ").map(n => n[0]).join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h4 className="font-medium text-foreground">{contributor.name}</h4>
-                      <Badge variant="outline" className="text-xs">{contributor.role}</Badge>
+                      <p className="font-medium text-foreground">{contributor.name}</p>
+                      <p className="text-xs text-muted-foreground">{contributor.role}</p>
                     </div>
                   </div>
 
-                  <p className="text-sm text-muted-foreground mb-3">{contributor.responsibilities}</p>
-
-                  {/* Stats */}
-                  <div className="flex flex-wrap gap-4 mb-3">
-                    <div className="flex items-center gap-1 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-primary" />
-                      <span className="font-medium">{contributor.contributions}</span>
-                      <span className="text-muted-foreground">contributions</span>
+                  {/* Metrics */}
+                  <div className="grid grid-cols-3 gap-4 mb-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Contributions</p>
+                      <p className="text-lg font-bold text-foreground">{contributor.contributions}</p>
                     </div>
-                    <div className="flex items-center gap-1 text-sm">
-                      <Target className="h-4 w-4 text-green-500" />
-                      <span className="font-medium">{contributor.milestones}</span>
-                      <span className="text-muted-foreground">milestones</span>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Milestones</p>
+                      <p className="text-lg font-bold text-foreground">{contributor.milestones}</p>
                     </div>
-                    <div className="flex items-center gap-1 text-sm">
-                      <span className="text-muted-foreground">Reliability:</span>
-                      <span className={`font-medium ${contributor.reliability >= 90 ? "text-green-500" : "text-yellow-500"}`}>
-                        {contributor.reliability}%
-                      </span>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Reliability</p>
+                      <div className="flex items-center gap-2">
+                        <Progress value={contributor.reliability} className="h-1.5 flex-1" />
+                        <span className="text-xs font-medium text-foreground">{contributor.reliability}%</span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Responsibilities */}
+                  <p className="text-xs text-muted-foreground mb-2">{contributor.responsibilities}</p>
 
                   {/* Evidence Links */}
-                  <div className="flex flex-wrap gap-2">
-                    {contributor.evidenceLinks.map((link) => (
-                      <Button key={link} variant="outline" size="sm" className="h-7 text-xs gap-1">
-                        <ExternalLink className="h-3 w-3" />
+                  <div className="flex flex-wrap gap-1.5">
+                    {contributor.evidenceLinks.map((link, i) => (
+                      <Badge key={i} variant="secondary" className="text-[10px] gap-1 cursor-pointer hover:bg-secondary/80">
+                        <ExternalLink className="h-2.5 w-2.5" />
                         {link}
-                      </Button>
+                      </Badge>
                     ))}
                   </div>
                 </div>
+
+                {/* View Profile */}
+                <Button variant="ghost" size="sm" className="flex-shrink-0">
+                  <Target className="h-4 w-4 mr-1" />
+                  Profile
+                </Button>
               </div>
             </div>
           ))}
