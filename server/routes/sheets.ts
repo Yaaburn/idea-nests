@@ -11,6 +11,8 @@ import {
   getServiceAccountInfo,
 } from '../lib/googleClient';
 import { getProjectToken, hasValidToken } from '../lib/tokenStore';
+import { Integration } from '../models/Integration';
+import { getGoogleAuth } from '../services/googleAuth.service';
 
 const router = Router();
 
@@ -19,6 +21,23 @@ const SPREADSHEET_ID_REGEX = /\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/;
 function parseSpreadsheetId(url: string): string | null {
   const match = url.match(SPREADSHEET_ID_REGEX);
   return match ? match[1] : null;
+}
+
+// Helper to get either OAuth token or Bot Service Account token
+async function resolveProjectToken(projectId: string): Promise<{ access_token: string, mode: string } | null> {
+  const credential = getProjectToken(projectId);
+  if (credential) {
+    return { access_token: credential.access_token, mode: credential.connector_mode || 'google_oauth' };
+  }
+  const botIntegration = await Integration.findOne({ projectId });
+  if (botIntegration) {
+    const auth = getGoogleAuth();
+    const token = await auth.getAccessToken();
+    if (token) {
+      return { access_token: token, mode: 'service_account' };
+    }
+  }
+  return null;
 }
 
 // POST /api/sheets/fetch
@@ -36,7 +55,7 @@ router.post('/fetch', async (req: Request, res: Response) => {
   }
 
   // Get token for this project
-  const credential = getProjectToken(projectId);
+  const credential = await resolveProjectToken(projectId);
   if (!credential) {
     return res.status(401).json({
       error: 'AUTH_REQUIRED',
@@ -102,7 +121,7 @@ router.post('/fetch', async (req: Request, res: Response) => {
       spreadsheet_id: spreadsheetId,
       title: metadata.title,
       tabs,
-      access_mode: credential.connector_mode === 'service_account' ? 'service_account' : 'oauth_token',
+      access_mode: credential.mode,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -143,7 +162,7 @@ router.get('/metadata', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'INVALID_URL' });
   }
 
-  const credential = getProjectToken(projectId);
+  const credential = await resolveProjectToken(projectId);
   if (!credential) {
     return res.status(401).json({ error: 'AUTH_REQUIRED' });
   }

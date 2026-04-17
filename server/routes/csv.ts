@@ -2,11 +2,17 @@
 // CSV/XLSX Upload Routes
 // Accepts file upload, parses into RawSheetData format.
 // File content is processed in-memory, never persisted.
+//
+// XLSX support: Uses SheetJS (xlsx) library.
+// - CSV: Full support (single sheet).
+// - XLSX: Basic support (values only, no formulas/charts/images).
+// - XLS (legacy): Best-effort, may lose formatting.
 // ═══════════════════════════════════════════════
 
 import { Router, type Request, type Response } from 'express';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
+import { logAuditEvent } from '../models/AuditLog';
 
 // In-memory storage only — file never touches disk
 const upload = multer({
@@ -34,7 +40,7 @@ const router = Router();
 
 // POST /api/csv/upload
 // Parses uploaded CSV/XLSX and returns RawSheetData
-router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
+router.post('/upload', upload.single('file'), async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -50,17 +56,35 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
 
     const buffer = req.file.buffer;
     const filename = req.file.originalname;
-    const isCSV = filename.toLowerCase().endsWith('.csv');
+    const ext = filename.toLowerCase().split('.').pop() ?? '';
+    const isCSV = ext === 'csv';
+    const isXLSX = ext === 'xlsx';
+    const isXLS = ext === 'xls';
 
     let workbook: XLSX.WorkBook;
+    const parseWarnings: string[] = [];
 
     if (isCSV) {
-      // Parse CSV
       const csvText = buffer.toString('utf-8');
       workbook = XLSX.read(csvText, { type: 'string' });
-    } else {
-      // Parse XLSX/XLS
+    } else if (isXLSX) {
       workbook = XLSX.read(buffer, { type: 'buffer' });
+      parseWarnings.push(
+        'XLSX parsing: values and basic formatting only. ' +
+        'Formulas are evaluated as cached values. Charts, images, and macros are not supported.'
+      );
+    } else if (isXLS) {
+      workbook = XLSX.read(buffer, { type: 'buffer' });
+      parseWarnings.push(
+        'Legacy XLS format: best-effort parsing. ' +
+        'Some formatting and data types may not be fully preserved. ' +
+        'Consider converting to XLSX or CSV for best results.'
+      );
+    } else {
+      return res.status(400).json({
+        error: 'UNSUPPORTED_FORMAT',
+        message: `Định dạng .${ext} không được hỗ trợ. Vui lòng dùng CSV hoặc XLSX.`,
+      });
     }
 
     const tabs: Array<{
@@ -76,7 +100,6 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       const sheet = workbook.Sheets[sheetName];
       if (!sheet) return;
 
-      // Convert to 2D array
       const data: string[][] = XLSX.utils.sheet_to_json(sheet, {
         header: 1,
         defval: '',
@@ -90,7 +113,6 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
         row.map(cell => String(cell ?? '').trim())
       );
 
-      // Skip sheets with too few non-empty headers
       if (headers.filter(h => h.length > 0).length < 2) return;
 
       tabs.push({
@@ -110,18 +132,51 @@ router.post('/upload', upload.single('file'), (req: Request, res: Response) => {
       });
     }
 
-    // Return RawSheetData format
+    // Audit log
+    await logAuditEvent('csv_upload', projectId, {
+      filename,
+      format: ext,
+      tabCount: tabs.length,
+      totalRows: tabs.reduce((s, t) => s + t.row_count, 0),
+      result: 'success',
+    });
+
+    // Return RawSheetData format with transparency metadata
+    const sourceMode = isCSV ? 'csv_snapshot' : isXLSX ? 'xlsx_snapshot' : 'xlsx_snapshot';
+
     res.json({
-      spreadsheet_id: `csv_${Date.now()}`,
+      spreadsheet_id: `${ext}_${Date.now()}`,
       title: filename.replace(/\.(csv|xlsx|xls)$/i, ''),
       tabs,
       access_mode: 'csv_upload',
+      // Transparency metadata
+      _parse_info: {
+        source_format: ext,
+        source_mode: sourceMode,
+        parser_engine: 'sheetjs',
+        is_multi_sheet: tabs.length > 1,
+        total_sheets_in_file: workbook.SheetNames.length,
+        sheets_parsed: tabs.length,
+        sheets_skipped: workbook.SheetNames.length - tabs.length,
+        warnings: parseWarnings,
+      },
     });
   } catch (err) {
-    console.error('[CSV] Parse error:', err);
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[CSV] Parse error:', msg);
+
+    // Audit the failure
+    const projectId = req.body?.projectId ?? 'unknown';
+    await logAuditEvent('csv_upload', projectId, {
+      filename: req.file?.originalname ?? 'unknown',
+      result: 'error',
+      errorMessage: msg,
+    });
+
     res.status(500).json({
       error: 'PARSE_FAILED',
       message: 'Không thể đọc file. Vui lòng kiểm tra định dạng.',
+      detail: msg,
     });
   }
 });

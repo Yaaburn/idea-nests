@@ -101,8 +101,31 @@ export type SheetTabType =
   | "mixed_tracker"
   | "summary_dashboard"
   | "notes_log"
+  | "quality_log"
   | "irrelevant"
+  | "ambiguous"
   | "unknown";
+
+// ─── Tab Classification (§5) ───
+
+export type TabClassification =
+  | "task_operational"
+  | "member_dimension"
+  | "timeline_schedule"
+  | "summary_dashboard"
+  | "notes_admin"
+  | "quality_log"
+  | "irrelevant"
+  | "ambiguous";
+
+// ─── Tab Version Status (§9) ───
+
+export type TabVersionStatus =
+  | "new"
+  | "existing_unchanged"
+  | "existing_changed"
+  | "deprecated_missing"
+  | "ambiguous_match";
 
 export type TabDecision = "use_primary" | "use_supporting" | "ignore";
 
@@ -121,6 +144,8 @@ export interface SheetTabEvaluation {
   tab_name: string;
   tab_index: number;
   likely_type: SheetTabType;
+  tab_classification: TabClassification;
+  tab_version_status: TabVersionStatus;
   confidence: number;             // 0–1
   final_score: number;
   score_components: TabScoreComponents;
@@ -128,6 +153,8 @@ export interface SheetTabEvaluation {
   evidence: string[];
   decision: TabDecision;
   warning_notes: string[];
+  table_block_score: number;      // §5 composite
+  header_row_detected: number;    // actual header row index
 }
 
 // ─── Ingestion Errors & Warnings ───
@@ -221,7 +248,7 @@ export interface CanonicalProjectData {
   ingested_at: string;            // ISO 8601
 }
 
-export type ConnectorMode = "google_oauth" | "service_account" | "csv_upload";
+export type ConnectorMode = "google_oauth" | "service_account" | "csv_upload" | "xlsx_upload";
 
 export interface ProjectIntegrationConfig {
   project_id: string;

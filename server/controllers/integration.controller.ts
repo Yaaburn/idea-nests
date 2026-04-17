@@ -10,6 +10,7 @@ import { extractSpreadsheetId } from '../utils/urlParser';
 import { verifyAccess } from '../services/sheet.service';
 import { getBotEmail } from '../services/googleAuth.service';
 import { runSync, getSyncData } from '../services/sync.service';
+import { logAuditEvent } from '../models/AuditLog';
 
 /**
  * POST /api/integrations/bot/connect
@@ -78,6 +79,13 @@ export async function connect(req: Request, res: Response): Promise<void> {
     });
 
     console.log(`[Controller] Integration created for project: ${projectId} → "${sheetInfo.title}"`);
+
+    // Audit: Connection created
+    await logAuditEvent('connect', projectId, {
+      integrationId: String(integration._id),
+      sheetTitle: sheetInfo.title,
+      spreadsheetId,
+    });
 
     // Step 5: Run first sync automatically
     const syncResult = await runSync(integration._id);
